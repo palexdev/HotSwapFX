@@ -1,0 +1,30 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'io.github.palexdev'
+version = "$ver"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "io.github.palexdev:directory-watcher:$directoryWatcher"
+    implementation "org.jooq:joor:$joor"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+
+    testImplementation platform("org.junit:junit-bom:$junit")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+}
+
+java {
+    sourceCompatibility = "$jdk"
+    targetCompatibility = "$jdk"
+}
+
+test {
+    useJUnitPlatform()
+}
