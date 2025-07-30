@@ -1,5 +1,8 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     id 'java-library'
+    id 'com.vanniktech.maven.publish' version "$mavenPublishPlugin"
 }
 
 group = 'io.github.palexdev'
@@ -30,6 +33,9 @@ dependencies {
 java {
     sourceCompatibility = "$jdk"
     targetCompatibility = "$jdk"
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx") }
 }
 
 test {
@@ -41,4 +47,18 @@ tasks.register("showcase", JavaExec) {
     mainClass.set(provider {
         return "apps.weather.WeatherApp"
     })
+}
+
+configurations {
+    // Remove vanniktech nonsense
+    gradle.taskGraph.whenReady { graph ->
+        if (graph.hasTask(mavenPlainJavadocJar)) {
+            mavenPlainJavadocJar.enabled = false
+        }
+    }
+}
+
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
 }
