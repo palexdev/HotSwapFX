@@ -30,6 +30,7 @@
     - [⭐ Usage](#-usage)
 - [📌 Project Roadmap](#-project-roadmap)
 - [🔰 Contributing](#-contributing)
+- 📢 [Acknowledgments](#-acknowledgments)
 
 ---
 
@@ -132,6 +133,7 @@ For now, I don't have many ideas. I expect some bug fixes or minor refactors/con
 
 1. **Fork the Repository**: Start by forking the project repository to your github account.
 2. **Clone Locally**: Clone the forked repository to your local machine using a git client.
+   
    ```sh
    git clone https://github.com/palexdev/HotSwapFX
    ```
@@ -163,3 +165,8 @@ For now, I don't have many ideas. I expect some bug fixes or minor refactors/con
 </details>
 ---
 
+## **📢 Acknowledgments**
+
+Shoutout to [Mauro de Wit](https://github.com/mfdewit) for showcasing this [hot reload](https://github.com/mfdewit/javafx-hot-reload) concept for JavaFX. It got me really curious about it and wanted to explore the idea further.
+
+---
