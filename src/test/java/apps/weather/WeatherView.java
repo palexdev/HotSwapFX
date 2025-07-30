@@ -42,10 +42,10 @@ public class WeatherView extends VBox {
         VFXScrollPane vsp = list.makeScrollable();
         vsp.setMainAxis(Orientation.HORIZONTAL);
         ScrollParams.cells(1.25).bind(vsp, Orientation.HORIZONTAL);
-        VBox forecast =  new VBox(new Label("TODAY'S FORECAST"), vsp);
+        VBox forecast = new VBox(new Label("TODAY'S FORECAST"), vsp);
         forecast.getStyleClass().add("forecast");
 
-        DetailsPane details = new  DetailsPane();
+        DetailsPane details = new DetailsPane();
         setVgrow(details, Priority.ALWAYS);
 
         getChildren().addAll(header, forecast, details);

@@ -196,7 +196,7 @@ public class HotSwapService {
 
     /// Registers the given component by its [HotSwappable#id()], issuing an error if the same id is already registered.
     public void register(HotSwappable<? extends Parent> component) {
-           Set<String> ids = idsMap.computeIfAbsent(ClassWrapper.wrap(component.parent().getClass()), _ -> new HashSet<>());
+        Set<String> ids = idsMap.computeIfAbsent(ClassWrapper.wrap(component.parent().getClass()), _ -> new HashSet<>());
         if (!ids.add(component.id())) {
             LOGGER.error("Component with ID: {} is already registered", component.id());
             return;

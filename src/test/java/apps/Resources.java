@@ -26,7 +26,7 @@ public class Resources {
     private Resources() {}
 
     public static URL getUrl(String name) {
-        return  Resources.class.getResource(name);
+        return Resources.class.getResource(name);
     }
 
     public static InputStream getStream(String name) {
