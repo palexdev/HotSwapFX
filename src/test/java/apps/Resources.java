@@ -18,28 +18,22 @@
 
 package apps;
 
-import javafx.geometry.Insets;
-import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
+import java.io.InputStream;
+import java.net.URL;
 
-public class View extends StackPane {
-    private final Label label;
+public class Resources {
 
-    {
-        label = new Label("Hello World!");
-        label.setText("Maybe it works now");
-        label.setTextFill(Color.RED);
-        label.setPadding(new Insets(12.0));
-        getChildren().add(label);
+    private Resources() {}
+
+    public static URL getUrl(String name) {
+        return  Resources.class.getResource(name);
     }
 
-    public Node getGraphic() {
-        return label.getGraphic();
+    public static InputStream getStream(String name) {
+        return Resources.class.getClassLoader().getResourceAsStream(name);
     }
 
-    public void setGraphic(Node node) {
-        label.setGraphic(node);
+    public static String loadResource(String name) {
+        return Resources.class.getClassLoader().getResource(name).toExternalForm();
     }
 }

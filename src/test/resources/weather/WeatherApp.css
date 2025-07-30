@@ -1,0 +1,196 @@
+/*
+ * Copyright (C) 2025 Parisi Alessandro - alessandro.parisi406@gmail.com
+ * This file is part of HotSwapFX (https://github.com/palexdev/HotSwapFX)
+ *
+ * HotSwapFX is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * HotSwapFX is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with HotSwapFX. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+.weather-view {
+  -fx-background-color: -md-sys-color-surface;
+  -fx-background-insets: 1px;
+  -fx-background-radius: 12px;
+  -fx-border-color: -md-sys-color-outline;
+  -fx-border-radius: 12px;
+  -fx-padding: 12px 48px 12px 48px;
+  -fx-spacing: 24px;
+}
+
+/* Header */
+
+.weather-view > .header {
+  -fx-hgap: 12px;
+  -fx-vgap: 8px;
+}
+
+.weather-view > .header .image-view {
+  -fx-fit-width: 64.0;
+  -fx-fit-height: 64.0;
+}
+
+.weather-view > .header .label {
+  -fx-font-size: 22px;
+  -fx-font-family: "MontSerrat Medium";
+  -fx-text-fill: -md-sys-color-on-surface
+}
+
+.weather-view > .header > .semaphore {
+  -fx-alignment: CENTER;
+  -fx-spacing: 12px;
+}
+
+.weather-view > .header > .semaphore > .mfx-font-icon {
+  -mfx-size: 24px;
+  -fx-opacity: 0.5;
+  transition-property: -fx-opacity;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+.weather-view > .header > .semaphore > .mfx-font-icon:hover {
+  -fx-opacity: 1;
+}
+
+.weather-view > .header > .semaphore > .min {
+  -mfx-color: #f4bd4f;
+}
+
+.weather-view > .header > .semaphore > .max {
+  -mfx-color: #60c354;
+}
+
+.weather-view > .header > .semaphore > .exit {
+  -mfx-color: #eb695e;
+}
+
+/* Sub Header */
+.weather-view > .header > .city {
+  -fx-font-size: 28px;
+}
+
+.weather-view > .header > .minMax {
+  -fx-spacing: 32px;
+}
+
+.weather-view > .header > .minMax > .min,
+.weather-view > .header > .minMax > .max {
+  -fx-font-family: "MontSerrat Bold";
+  -fx-font-size: 36px;
+}
+
+.weather-view > .header > .minMax > .min {
+  -fx-text-fill: -md-sys-color-outline;
+}
+
+.weather-view > .header > .wrapper-region {
+  -fx-background-color: -md-sys-color-secondary-container;
+  -fx-background-radius: 12px;
+  -fx-padding: 8px;
+}
+
+/* Forecast */
+.weather-view > .forecast {
+  -fx-background-color: -md-sys-color-surface-container-low;
+  -fx-background-radius: 12px;
+  -fx-padding: 16px;
+  -fx-spacing: 12px;
+}
+
+.weather-view > .forecast > .label {
+  -fx-font-family: "MontSerrat SemiBold";
+  -fx-font-size: 12px;
+  -fx-text-fill: -md-sys-color-outline;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane {
+  -vfx-auto-hide-bars: true;
+  -vfx-min-bars-opacity: 0.2;
+  -vfx-smooth-scroll: true;
+  -vfx-vbar-policy: NEVER;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane > .vfx-scroll-bar:horizontal {
+  -fx-min-height: 6px;
+  -fx-padding: 1px 0px 1px 0px;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane > .vfx-scroll-bar:horizontal:compact:buttons {
+  -fx-padding: 2px 0px 2px 0px;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane .vfx-list {
+  -vfx-cell-size: 96px;
+  -vfx-fit-to-viewport: false;
+  -vfx-spacing: 8px;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane .forecast-card {
+  -fx-background-color: -md-sys-color-secondary-container;
+  -fx-background-radius: 12px;
+  -fx-padding: 8px;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane .forecast-card > .label {
+  -fx-font-family: "MontSerrat Bold";
+  -fx-text-fill: -md-sys-color-on-secondary-container;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane .forecast-card > .label.hour {
+  -fx-text-fill: -md-sys-color-outline;
+}
+
+.weather-view > .forecast > .vfx-scroll-pane .forecast-card > .image-view {
+  -fx-fit-width: 32px;
+  -fx-fit-height: 32px;
+}
+
+/* Details */
+.weather-view > .details {
+  -fx-background-color: -md-sys-color-surface-container-low;
+  -fx-background-radius: 12px;
+  -fx-padding: 16px;
+  -fx-hgap: 12px;
+  -fx-vgap: 12px;
+}
+
+.weather-view > .details > .label {
+  -fx-font-family: "MontSerrat SemiBold";
+  -fx-font-size: 12px;
+  -fx-text-fill: -md-sys-color-outline;
+}
+
+.weather-view > .details > .card {
+  -fx-background-color: -md-sys-color-secondary-container;
+  -fx-background-radius: 12px;
+  -fx-pref-width: 144px;
+  -fx-pref-height: 64px;
+  -fx-padding: 8px 12px 8px 12px;
+}
+
+.weather-view > .details > .card > .label {
+  -fx-font-family: "MontSerrat SemiBold";
+}
+
+.weather-view > .details > .card > .title {
+  -fx-text-fill: -md-sys-color-outline;
+}
+
+.weather-view > .details > .card > .value {
+  -fx-text-fill: -md-sys-color-on-secondary-container;
+  -fx-font-size: 16px;
+}
+
+.weather-view > .details > .card > .mfx-font-icon {
+  -mfx-size: 24px;
+  -mfx-color: -md-sys-color-outline;
+}

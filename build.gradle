@@ -14,6 +14,13 @@ dependencies {
     implementation "org.jooq:joor:$joor"
     implementation "org.tinylog:tinylog-impl:$tinylog"
 
+    testImplementation "io.github.palexdev:mfxcore:24.2.0"
+    testImplementation "io.github.palexdev:mfxresources:24.2.0"
+    testImplementation ("io.github.palexdev:virtualizedfx:24.2.3") {
+        exclude group: "io.github.palexdev"
+    }
+    testImplementation "io.github.palexdev:imcache:21.4.0"
+
     testImplementation platform("org.junit:junit-bom:$junit")
     testImplementation "org.junit.jupiter:junit-jupiter"
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
