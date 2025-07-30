@@ -110,6 +110,8 @@ public class HotSwapService {
     /// parameter through this property. If you start experiencing such weird issue, try increasing the reload delay.
     public static long RELOAD_DELAY = 200;
 
+    public static final String SYSTEM_FLAG = "HOTSWAPFX";
+
     public static HotSwapService instance() {
         return INSTANCE;
     }
@@ -149,7 +151,7 @@ public class HotSwapService {
         }
 
         if (!Utils.isServiceEnabled()) {
-            LOGGER.warn("Cannot start HotSwapService as it is disabled.\nSet the HOTSWAPFX system property to 'true' to enable it");
+            LOGGER.warn("Cannot start HotSwapService as it is disabled.\nSet the {} system property to 'true' to enable it", SYSTEM_FLAG);
             return;
         }
 

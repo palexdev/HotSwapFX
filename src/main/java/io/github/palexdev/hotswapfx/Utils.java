@@ -75,9 +75,9 @@ public class Utils {
     /// @return whether the `HotSwapFX` is enabled by looking at the value of the `HOTSWAP` system property (`false` if absent).
     public static boolean isServiceEnabled() {
         try {
-            return Boolean.parseBoolean(System.getProperty("HOTSWAPFX", "false"));
+            return Boolean.parseBoolean(System.getProperty(HotSwapService.SYSTEM_FLAG, "false"));
         } catch (Exception ex) {
-            Logger.error(ex, "Failed to parse HOTSWAPFX system property");
+            Logger.error(ex, "Failed to parse {}} system property", HotSwapService.SYSTEM_FLAG);
             return false;
         }
     }
