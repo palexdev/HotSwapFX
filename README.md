@@ -8,8 +8,7 @@
 	<img src="https://img.shields.io/github/license/palexdev/HotSwapFX?style=default&logo=opensourceinitiative&logoColor=white&color=0080ff" alt="license">
 	<img src="https://img.shields.io/github/last-commit/palexdev/HotSwapFX?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
 	<img src="https://img.shields.io/github/languages/top/palexdev/HotSwapFX?style=default&color=0080ff" alt="repo-top-language">
-    <img src="https://img.shields.io/maven-central/v/io.github.palexdev/hotswapfx
-" alt="maven-central-version">
+    <img src="https://img.shields.io/maven-central/v/io.github.palexdev/hotswapfx" alt="maven-central-version">
 </p>
 <p align="left"><!-- default option, no dependency badges. -->
 </p>
