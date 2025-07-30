@@ -2,6 +2,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     id 'java-library'
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
     id 'com.vanniktech.maven.publish' version "$mavenPublishPlugin"
 }
 
@@ -36,6 +37,12 @@ java {
     withSourcesJar()
     withJavadocJar()
     tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx") }
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.graphics']
+    configurations = ["compileOnly", "testImplementation"]
 }
 
 test {
