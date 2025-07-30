@@ -1,0 +1,54 @@
+<svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8E53;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#64B5F6;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle for the icon -->
+  <circle cx="50" cy="50" r="35" fill="url(#blueGradient)" opacity="0.1"/>
+  
+  <!-- Hot swap arrows indicating dynamic refresh -->
+  <g transform="translate(50,50)">
+    <!-- Circular arrows showing hot swap -->
+    <path d="M -15,-15 A 21,21 0 0,1 15,-15" stroke="url(#orangeGradient)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 15,15 A 21,21 0 0,1 -15,15" stroke="url(#orangeGradient)" stroke-width="3" fill="none" stroke-linecap="round"/>
+    
+    <!-- Arrow heads -->
+    <polygon points="12,-18 18,-12 12,-6" fill="url(#orangeGradient)"/>
+    <polygon points="-12,18 -18,12 -12,6" fill="url(#orangeGradient)"/>
+    
+    <!-- Central JavaFX-inspired window/component -->
+    <rect x="-8" y="-8" width="16" height="16" rx="2" fill="url(#blueGradient)" opacity="0.8"/>
+    <rect x="-6" y="-6" width="12" height="3" rx="1" fill="white" opacity="0.9"/>
+    <rect x="-6" y="-1" width="12" height="2" rx="1" fill="white" opacity="0.7"/>
+    <rect x="-6" y="3" width="8" height="2" rx="1" fill="white" opacity="0.7"/>
+  </g>
+  
+  <!-- "Hot" indicator with flame-like elements -->
+  <g transform="translate(25,25)">
+    <ellipse cx="0" cy="0" rx="3" ry="6" fill="url(#orangeGradient)" opacity="0.6" transform="rotate(-15)"/>
+    <ellipse cx="2" cy="-2" rx="2" ry="4" fill="#FF6B35" opacity="0.8" transform="rotate(10)"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="110" y="55" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2C3E50">
+    HotSwap<tspan fill="url(#blueGradient)" font-weight="300">FX</tspan>
+  </text>
+  
+  <!-- Subtle connection lines showing the "swap" concept -->
+  <line x1="85" y1="45" x2="105" y2="45" stroke="url(#orangeGradient)" stroke-width="2" opacity="0.6" stroke-dasharray="3,2"/>
+  <line x1="85" y1="65" x2="105" y2="65" stroke="url(#orangeGradient)" stroke-width="2" opacity="0.6" stroke-dasharray="3,2"/>
+</svg>
