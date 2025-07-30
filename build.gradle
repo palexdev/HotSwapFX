@@ -35,3 +35,10 @@ java {
 test {
     useJUnitPlatform()
 }
+
+tasks.register("showcase", JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass.set(provider {
+        return "apps.weather.WeatherApp"
+    })
+}
