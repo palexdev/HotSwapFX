@@ -35,7 +35,7 @@
 
 ## 🙌 Showcase
 
-<video loop src="assets/showcase.webm"></video>
+![showcase](assets/showcase.gif)
 
 ## 📍 Overview, Features & Limitations
 
