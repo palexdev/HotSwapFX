@@ -306,7 +306,7 @@ public class HotSwapService {
         logger().trace("Notifying class hooks...");
         notifyHooks(HookType.ON_CLASS, classWrapper);
 
-        ids.forEach(this::reload);
+        Set.copyOf(ids).forEach(this::reload);
     }
 
     // Hooks
