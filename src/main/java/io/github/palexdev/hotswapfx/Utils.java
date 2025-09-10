@@ -67,6 +67,7 @@ public class Utils {
             classpath = Arrays.stream(getClassPath())
                 .map(Path::of)
                 .filter(Files::isDirectory)
+                .filter(p -> !Path.of("").equals(p))
                 .toList();
         }
         return classpath;
