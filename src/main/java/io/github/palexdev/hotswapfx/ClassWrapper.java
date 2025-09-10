@@ -18,50 +18,92 @@
 
 package io.github.palexdev.hotswapfx;
 
+import java.nio.file.Path;
 import java.util.Objects;
 
-/// A simple wrapper for a [Class]. Convenient for this project to compare two classes. Because we reload the changed
-/// classes by redefining them in a new class loader (see [HotSwapService] and [HotSwapClassLoader]), we can't use
-/// the equal sign nor the equals method when comparing two classes because they end up being different, even though
-/// they are not. The solution is to compare their fully qualified names, and so the [#equals(Object)] method is overridden
-/// to do so. The [#hashCode()] method is also overridden to use the fully qualified name instead.
-public record ClassWrapper(Class<?> klass) {
+import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
+
+/// Because the service reloads classes from the classpath, two classes with the same fully qualified name will be different.<br >
+/// This wrapper solves this issue by wrapping a class' fully qualified name and the related class.<br >
+/// The latter is initially `null`, and it's loaded only when requested by the service, [#reload(Path)].
+/// 
+/// The benefit of this change is that when a reload request arrives from the [ClassPathWatcher], the [HotSwapService]
+/// can check whether a class is registered before reloading it from the disk, which is a costly operation. Especially
+/// considering that many classes may have changed, but only a few may be registered on the service.<br >
+/// In short, this allows implementing lazy reload of class files.
+public class ClassWrapper {
+    //================================================================================
+    // Static Properties
+    //================================================================================
+    private static final HotSwapClassLoader classLoader = new HotSwapClassLoader();
+
+    //================================================================================
+    // Properties
+    //================================================================================
+    private final String name;
+    private Class<?> klass;
+
     //================================================================================
     // Constructors
     //================================================================================
-    public ClassWrapper {
-        if (klass == null) throw new NullPointerException("Class cannot be null");
+    public ClassWrapper(String name) {
+        this.name = name;
     }
 
+    /// Creates a new `ClassWrapper` instance with the fully qualified name of the given class.
     public static ClassWrapper wrap(Class<?> klass) {
-        return new ClassWrapper(klass);
+        return new ClassWrapper(klass.getName());
     }
 
     //================================================================================
     // Methods
     //================================================================================
 
-    /// Wraps the given [Class] and runs [#equals(Object)] on it.
-    public boolean equals(Class<?> klass) {
-        return this.equals(wrap(klass));
+    /// Reloads and returns a class from the given path.<br >
+    /// There are no checks here, the given file is expected to be the class associated with the fully qualified name
+    /// wrapped by this object. This is ensured by the [HotSwapService].
+    ///
+    /// If the reload fails, an error is logged and `null` is returned.
+    ///
+    /// @see HotSwapClassLoader
+    protected Class<?> reload(Path path) {
+        try {
+            klass = classLoader.reload(name, path);
+            return klass;
+        } catch (Exception ex) {
+            logger().error(ex, "Failed to reload class {} at path: {}", name, path);
+            return null;
+        }
     }
 
     //================================================================================
     // Overridden Methods
     //================================================================================
 
-    /// {@inheritDoc}
-    ///
-    /// Overridden to compare the classes' fully qualified names.
     @Override
-    public boolean equals(Object object) {
-        if (object == null || getClass() != object.getClass()) return false;
-        ClassWrapper that = (ClassWrapper) object;
-        return klass.getName().equals(that.klass.getName());
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        ClassWrapper that = (ClassWrapper) o;
+        return Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(klass.getName());
+        return Objects.hashCode(name);
+    }
+
+    //================================================================================
+    // Getters
+    //================================================================================
+    public String name() {
+        return name;
+    }
+
+    public String simpleName() {
+        return name.substring(name.lastIndexOf('.') + 1);
+    }
+
+    public Class<?> klass() {
+        return klass;
     }
 }
