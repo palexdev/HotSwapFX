@@ -83,8 +83,8 @@ import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
 /// 1) Java's [ClassLoaders][ClassLoader] cache the class they load. For this project this is not good because by reloading
 /// an already defined class, there's the risk of not viewing any change or desynchronization. The service uses a new
 /// class loader every time a class needs to be reloaded, see [HotSwapClassLoader].
-/// 2) The class path watching system is based on polling. By default the poll rate is set to 1 second, but it can be changed
-/// by setting the [#POLL_RATE] variable.
+/// 2) The class path watching system is based on polling. By default, the poll rate is set to 3 seconds, but it can be changed
+/// by setting the [#POLL_RATE] variable. If the service fails to detect changes, try increasing this value.
 /// 3) The service seems to work only if running in debug mode. I don't really know why, since we're technically not
 /// relying on some internal hot swap mechanism. We watch the class path, and when something changes, we straight up reload
 /// it reading its bytes and defining a new class. That said, I found it very convenient when used in
@@ -96,10 +96,10 @@ public class HotSwapService {
     public static final String SYSTEM_FLAG = "HOTSWAPFX";
 
     /// This value determines the delay between each scan task of [ClassPathWatcher].<br >
-    /// Values are in milliseconds, by default, it's 1000 ms.
+    /// Values are in milliseconds, by default, it's 3000 ms.
     ///
     /// It takes effect only when the service is started. If you change this while it's already running, it won't have any effect!
-    public static final long POLL_RATE = 1000;
+    public static long POLL_RATE = 3000;
 
     private static final HotSwapService INSTANCE = new HotSwapService();
 
