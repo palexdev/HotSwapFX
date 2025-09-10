@@ -45,8 +45,8 @@ public class WeatherApp extends Application {
             .setInstantiator(_ -> new WeatherView(stage))
             .monitorChildren(ChildrenTracker::new);
 
-        HotSwapService.instance().earlyHook(e -> {
-            if (e.path().toString().contains("weather"))
+        HotSwapService.instance().earlyHook(p -> {
+            if (p.toString().contains("weather"))
                 HotSwapService.instance().reload("weather-view");
         });
 
