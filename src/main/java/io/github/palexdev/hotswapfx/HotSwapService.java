@@ -241,7 +241,7 @@ public class HotSwapService {
 
     /// Reloads the component with the given id. Issues an error if no component is found.
     ///
-    /// Instantiates a new node and then starts the reload process, see [HotSwappable] and [HotSwappable#onReload(Parent)].
+    /// Instantiates a new node and then starts the reload process, see [HotSwappable] and [HotSwappable#reload()].
     public void reload(String id) {
         HotSwappable<? extends Parent> component = componentsMap.get(id);
         if (component == null) {
