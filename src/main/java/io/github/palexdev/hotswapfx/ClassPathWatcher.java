@@ -19,88 +19,181 @@
 package io.github.palexdev.hotswapfx;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchService;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.function.Consumer;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.StructuredTaskScope.Subtask;
+import java.util.function.BiConsumer;
 
-import io.github.palexdev.watcher.DirectoryChangeEvent;
-import io.github.palexdev.watcher.DirectoryWatcher;
+import org.tinylog.Logger;
+import org.tinylog.TaggedLogger;
 
-/// This is responsible for watching for changes among the classes on the class path (which is given by [Utils#getClassPathDirectories()]).
-/// For this I use a personal fork of the amazing work done [here](https://github.com/gmethvin/directory-watcher), which
-/// is basically a convenience facade over the Java's disastrous [WatchService] API.
-///
-/// Whenever a change is detected, it is notified through a [Consumer] that can be specified by the user. In the case
-/// of [HotSwapService], the action reloads the changed classes.
+/// This core class is responsible for watching the class path directories given by [Utils#getClassPathDirectories()]
+/// and any extra path added through [#addExtraWatchPath(Path)].<br >
+/// The watch mechanism is based on polling and by default runs every second
+/// (from each task, see [ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)]).<br >
+/// See [HotSwapService] to know how to change the poll rate.
+/// 
+/// The watcher visits every file and directory recursively starting from the aforementioned root paths. Each is handled
+/// by a separate virtual thread. During the visit, all class files are collected, and it stores their 'last modified'
+/// attribute in a map. When the stored value is different from the current one, the path is marked as modified and added
+/// to a collection. When all virtual threads have finished, all the modified paths are collected in a single collection, 
+/// and the reload is sent as a batch to [HotSwapService#reload(Path[])].
+/// 
+/// @since 24.2.0 Previously, the service was using a facade over the [WatchService] API. However, that works like crap.
+/// Even with file hashing, events were sometimes randomly lost. And that led to registered nodes to not be reloaded and
+/// swapper. I grew tired of that bullshit, and so I implemented this polling mechanism. It's much, much more reliable, but
+/// it could be slightly more heavy on performance.
+/// (Though the [WatchService] API also kinda relies on polling, so it also may not')
 public class ClassPathWatcher {
+    //================================================================================
+    // Static Properties
+    //================================================================================
+    private static final TaggedLogger LOGGER = Logger.tag("ClassPathWatcher");
+    private static final Set<Path> EXTRA_WATCH_PATHS = new HashSet<>();
+
+    public static void addExtraWatchPath(Path path) {
+        EXTRA_WATCH_PATHS.add(path);
+    }
+
+    public static void addExtraWatchPath(String path) {
+        EXTRA_WATCH_PATHS.add(Path.of(path));
+    }
+
     //================================================================================
     // Properties
     //================================================================================
-    private final DirectoryWatcher watcher;
-    private Consumer<DirectoryChangeEvent> onEvent = _ -> {};
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(t -> {
+        Thread thread = new Thread(t);
+        thread.setName("HotSwapFX-ClasspathWatcher");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private Future<?> task;
+
+    private final Set<Path> watchPaths = new HashSet<>();
+    private final Map<Path, Long> lastModified = new ConcurrentHashMap<>();
 
     //================================================================================
     // Constructors
     //================================================================================
     public ClassPathWatcher() {
-        watcher = buildWatcher();
+        List<Path> directories = Utils.getClassPathDirectories();
+        if (directories.isEmpty()) {
+            LOGGER.warn("""
+                    No class path directories found to watch.
+                    If your project is modular you'll have to manually add the directories to the watch list.
+                    You can do so by calling ClassPathWatcher.addExtraWatchPath(Path)
+                    """
+            );
+        }
+        watchPaths.addAll(directories);
+        watchPaths.addAll(EXTRA_WATCH_PATHS);
     }
 
     //================================================================================
     // Methods
     //================================================================================
 
-    /// Starts the watcher asynchronously on a virtual thread.
+    /// Starts the watcher asynchronously on a daemon thread.<br >
+    /// The polling executes by default at delays of 1 second.
+    /// 
+    /// See [HotSwapService] on how to change the poll rate.
     public void start() {
-        if (watcher != null)
-            watcher.watchAsync(Executors.newVirtualThreadPerTaskExecutor());
+        task = executor.scheduleWithFixedDelay(
+            this::scan,
+            0,
+            HotSwapService.POLL_RATE,
+            TimeUnit.MILLISECONDS
+        );
     }
 
-    /// Tries to stop the watcher.
+    /// Stop the watcher by stopping the poll task immediately.
     public void stop() {
-        if (watcher != null && !watcher.isClosed()) {
-            try {
-                watcher.close();
-            } catch (IOException ex) {
-                HotSwapService.logger().error(ex, "Failed to close class path watcher");
+        if (task != null) task.cancel(true);
+        executor.shutdown();
+        lastModified.clear();
+        watchPaths.clear();
+    }
+
+    /// Scans the class path directories for modified files.<br >
+    /// If any are found, they are added to a batch and sent to [HotSwapService#reload(Path[])].
+    ///
+    /// Each directory scan is assigned to a different virtual thread.
+    ///
+    /// @see #walk(Path)
+    private void scan() {
+        lastModified.keySet().removeIf(p -> !Files.exists(p));
+
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            List<Subtask<Set<Path>>> subtasks = watchPaths.stream()
+                .map(p -> (Callable<Set<Path>>) () -> walk(p))
+                .map(scope::fork)
+                .toList();
+
+            scope.join().throwIfFailed();
+
+            Path[] allModified = subtasks.stream()
+                .flatMap(s -> s.get().stream())
+                .distinct()
+                .toArray(Path[]::new);
+            if (allModified.length > 0) {
+                HotSwapService.instance().reload(allModified);
             }
+        } catch (Exception ex) {
+            LOGGER.error(ex, "Failed to scan classpath for modified files");
         }
     }
 
-    /// Calls the specified [#getOnEvent()] [Consumer] with the given event.
-    protected void onEvent(DirectoryChangeEvent e) {
-        onEvent.accept(e);
+    /// Walks down the given `path`, collects and returns all class files for which the `last modified` attribute
+    /// has changed since the last scan.
+    private Set<Path> walk(Path path) throws IOException {
+        Set<Path> modified = new HashSet<>();
+        Files.walkFileTree(path, new FileWalker((p, a) -> {
+            if (p.toString().endsWith(".class")) {
+                long lastMillis = a.lastModifiedTime().toMillis();
+                Long prev = lastModified.put(p, lastMillis);
+                if (prev != null && prev != lastMillis) {
+                    LOGGER.debug("File modified: {}, adding to batch", p);
+                    modified.add(p);
+                }
+            }
+        }));
+        return modified;
     }
 
-    /// Creates the [DirectoryWatcher] which observes for changes on the class path and notifies through [#onEvent(DirectoryChangeEvent)].
-    protected DirectoryWatcher buildWatcher() {
-        try {
-            List<Path> paths = Utils.getClassPathDirectories();
-            return DirectoryWatcher.builder()
-                .paths(paths)
-                .listener(this::onEvent)
-                .fileHashing(false)
-                .build();
-        } catch (IOException ex) {
-            HotSwapService.logger().error(ex, "Failed to create class path watcher");
-            return null;
+    //================================================================================
+    // Inner Classes
+    //================================================================================
+    static class FileWalker implements FileVisitor<Path> {
+        private final BiConsumer<Path, BasicFileAttributes> onFile;
+
+        FileWalker(BiConsumer<Path, BasicFileAttributes> onFile) {this.onFile = onFile;}
+
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+            return FileVisitResult.CONTINUE;
         }
-    }
 
-    //================================================================================
-    // Getters/Setters
-    //================================================================================
-    public DirectoryWatcher getWatcher() {
-        return watcher;
-    }
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            onFile.accept(file, attrs);
+            return FileVisitResult.CONTINUE;
+        }
 
-    public Consumer<DirectoryChangeEvent> getOnEvent() {
-        return onEvent;
-    }
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) {
+            return FileVisitResult.CONTINUE;
+        }
 
-    public void setOnEvent(Consumer<DirectoryChangeEvent> onEvent) {
-        this.onEvent = onEvent != null ? onEvent : _ -> {};
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            return FileVisitResult.CONTINUE;
+        }
     }
 }

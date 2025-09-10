@@ -14,7 +14,6 @@ repositories {
 }
 
 dependencies {
-    implementation "io.github.palexdev:directory-watcher:$directoryWatcher"
     implementation "org.jooq:joor:$joor"
     implementation "org.tinylog:tinylog-impl:$tinylog"
 
