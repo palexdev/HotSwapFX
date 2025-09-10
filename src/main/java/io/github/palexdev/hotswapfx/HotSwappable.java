@@ -70,7 +70,7 @@ public class HotSwappable<P extends Parent> {
         Parent parent = ((Parent) o).getParent();
         // Try replacing in parent container...
         if (parent instanceof Pane pane) {
-            logger().trace("Replacing component in parent container: {}", pane);
+            logger().debug("Replacing component in parent container: {}", pane);
             ObservableList<Node> children = pane.getChildren();
             int idx = children.indexOf(o);
             if (idx >= 0) Platform.runLater(() -> children.set(idx, ((Parent) n)));
@@ -82,7 +82,7 @@ public class HotSwappable<P extends Parent> {
             Optional.ofNullable(((Parent) o).getScene())
                 .filter(s -> s.getRoot() == o)
                 .ifPresent(s -> {
-                    logger().trace("Replacing root of scene: {}", s);
+                    logger().debug("Replacing root of scene: {}", s);
                     s.setRoot(((Parent) n));
                 }));
     };
@@ -143,10 +143,10 @@ public class HotSwappable<P extends Parent> {
             P newInstance = instantiate();
             if (newInstance == null) return;
 
-            logger().info("Cloning state...");
+            logger().trace("Cloning state...");
             stateCloner.accept(parent, newInstance);
 
-            logger().info("Swapping...");
+            logger().trace("Swapping...");
             onReload.accept(parent, newInstance);
             this.parent = newInstance;
 
@@ -158,7 +158,7 @@ public class HotSwappable<P extends Parent> {
 
     /// Uses the specified [#getInstantiator()] to create a new instance of the wrapped parent.
     protected P instantiate() {
-        logger().info("Instantiating...");
+        logger().trace("Instantiating...");
         return instantiator.apply(parent);
     }
 

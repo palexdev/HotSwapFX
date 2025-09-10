@@ -186,7 +186,7 @@ public class HotSwapService {
         }
 
         componentsMap.put(component.id(), component);
-        logger().debug("Registered component: {})", component);
+        logger().info("Registered component: {})", component);
     }
 
     /// Convenience method to register a component by an id and the initial [Parent] instance that needs to be swapped.
@@ -236,7 +236,7 @@ public class HotSwapService {
         if (full) {
             Set<String> ids = idsMap.remove(klass);
             ids.forEach(id -> componentsMap.remove(id).dispose());
-            logger().debug("Unregistered all components of class: {})", klass);
+            logger().info("Unregistered all components of class: {})", klass);
             return;
         }
 
@@ -291,7 +291,7 @@ public class HotSwapService {
         ClassWrapper classWrapper = new ClassWrapper(className);
         Set<String> ids = idsMap.get(classWrapper);
         if (ids == null || ids.isEmpty()) {
-            logger().info("No registered components found for class: {}", className);
+            logger().debug("No registered components found for class: {}", className);
             return;
         }
 
@@ -299,7 +299,7 @@ public class HotSwapService {
         if (klass == null) return;
 
         if (!Node.class.isAssignableFrom(klass)) {
-            logger().info("Class {} is not a Node, skipping...", klass);
+            logger().debug("Class {} is not a Node, skipping...", klass);
             return;
         }
 
