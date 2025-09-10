@@ -19,11 +19,7 @@
 package io.github.palexdev.hotswapfx;
 
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.*;
@@ -35,16 +31,15 @@ import org.tinylog.TaggedLogger;
 
 /// This core class is responsible for watching the class path directories given by [Utils#getClassPathDirectories()]
 /// and any extra path added through [#addExtraWatchPath(Path)].<br >
-/// The watch mechanism is based on polling and by default runs every second
+/// The watch mechanism is based on polling which runs at a fixed delay
 /// (from each task, see [ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)]).<br >
-/// See [HotSwapService] to know how to change the poll rate.
-/// 
+///
 /// The watcher visits every file and directory recursively starting from the aforementioned root paths. Each is handled
-/// by a separate virtual thread. During the visit, all class files are collected, and it stores their 'last modified'
-/// attribute in a map. When the stored value is different from the current one, the path is marked as modified and added
-/// to a collection. When all virtual threads have finished, all the modified paths are collected in a single collection, 
+/// by a separate virtual thread. During the visit, all class files are collected, and it stores their [attributes][FileAttributes]
+/// in a map. When the stored value is different from the current one, the path is marked as modified and added
+/// to a collection. When all virtual threads have finished, all the modified paths are collected in a single collection,
 /// and the reload is sent as a batch to [HotSwapService#reload(Path[])].
-/// 
+///
 /// @since 24.2.0 Previously, the service was using a facade over the [WatchService] API. However, that works like crap.
 /// Even with file hashing, events were sometimes randomly lost. And that led to registered nodes to not be reloaded and
 /// swapper. I grew tired of that bullshit, and so I implemented this polling mechanism. It's much, much more reliable, but
@@ -77,7 +72,7 @@ public class ClassPathWatcher {
     private Future<?> task;
 
     private final Set<Path> watchPaths = new HashSet<>();
-    private final Map<Path, Long> lastModified = new ConcurrentHashMap<>();
+    private final Map<Path, FileAttributes> lastAttributes = new ConcurrentHashMap<>();
 
     //================================================================================
     // Constructors
@@ -86,10 +81,10 @@ public class ClassPathWatcher {
         List<Path> directories = Utils.getClassPathDirectories();
         if (directories.isEmpty()) {
             LOGGER.warn("""
-                    No class path directories found to watch.
-                    If your project is modular you'll have to manually add the directories to the watch list.
-                    You can do so by calling ClassPathWatcher.addExtraWatchPath(Path)
-                    """
+                No class path directories found to watch.
+                If your project is modular you'll have to manually add the directories to the watch list.
+                You can do so by calling ClassPathWatcher.addExtraWatchPath(Path)
+                """
             );
         }
         watchPaths.addAll(directories);
@@ -101,9 +96,7 @@ public class ClassPathWatcher {
     //================================================================================
 
     /// Starts the watcher asynchronously on a daemon thread.<br >
-    /// The polling executes by default at delays of 1 second.
-    /// 
-    /// See [HotSwapService] on how to change the poll rate.
+    /// The polling executes by default at delays specified by [HotSwapService#POLL_RATE].
     public void start() {
         task = executor.scheduleWithFixedDelay(
             this::scan,
@@ -117,7 +110,7 @@ public class ClassPathWatcher {
     public void stop() {
         if (task != null) task.cancel(true);
         executor.shutdown();
-        lastModified.clear();
+        lastAttributes.clear();
         watchPaths.clear();
     }
 
@@ -128,8 +121,9 @@ public class ClassPathWatcher {
     ///
     /// @see #walk(Path)
     private void scan() {
-        lastModified.keySet().removeIf(p -> !Files.exists(p));
+        lastAttributes.keySet().removeIf(p -> !Files.exists(p));
 
+        LOGGER.trace("Scanning...");
         try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
             List<Subtask<Set<Path>>> subtasks = watchPaths.stream()
                 .map(p -> (Callable<Set<Path>>) () -> walk(p))
@@ -142,6 +136,7 @@ public class ClassPathWatcher {
                 .flatMap(s -> s.get().stream())
                 .distinct()
                 .toArray(Path[]::new);
+            LOGGER.trace("End of scan, found {} modified files", allModified.length);
             if (allModified.length > 0) {
                 HotSwapService.instance().reload(allModified);
             }
@@ -150,15 +145,19 @@ public class ClassPathWatcher {
         }
     }
 
-    /// Walks down the given `path`, collects and returns all class files for which the `last modified` attribute
-    /// has changed since the last scan.
+    /// Walks down the given `path`, collects and returns all class files for which [file attributes][FileAttributes]
+    /// have changed since the last scan.
     private Set<Path> walk(Path path) throws IOException {
+        if (!Files.isDirectory(path)) return Collections.emptySet();
         Set<Path> modified = new HashSet<>();
         Files.walkFileTree(path, new FileWalker((p, a) -> {
             if (p.toString().endsWith(".class")) {
                 long lastMillis = a.lastModifiedTime().toMillis();
-                Long prev = lastModified.put(p, lastMillis);
-                if (prev != null && prev != lastMillis) {
+                long size = a.size();
+                byte[] hash = FileHasher.hash(p);
+                FileAttributes newAttr = new FileAttributes(lastMillis, size, hash);
+                FileAttributes prevAttr = lastAttributes.put(p, newAttr);
+                if (prevAttr != null && (!Objects.equals(prevAttr, newAttr))) {
                     LOGGER.debug("File modified: {}, adding to batch", p);
                     modified.add(p);
                 }
@@ -170,6 +169,36 @@ public class ClassPathWatcher {
     //================================================================================
     // Inner Classes
     //================================================================================
+
+    /// Wrapper for three file attributes:
+    /// - the last modified timestamp
+    /// - the size
+    /// - the hash
+    ///
+    /// It's used by the `ClassPathWatcher` to determine if a file has changed since the last scan.<br >
+    /// Hashes are compared as a last resort if the date and size fail to identify a change.
+    ///
+    /// @see FileHasher#equals(byte[], byte[])
+    record FileAttributes(
+        long lastModified,
+        long size,
+        byte[] hash
+    ) {
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            FileAttributes that = (FileAttributes) o;
+            return size == that.size &&
+                   lastModified == that.lastModified &&
+                   (FileHasher.equals(that.hash(), hash()));
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(lastModified, size, Arrays.hashCode(hash));
+        }
+    }
+
     static class FileWalker implements FileVisitor<Path> {
         private final BiConsumer<Path, BasicFileAttributes> onFile;
 
@@ -188,11 +217,13 @@ public class ClassPathWatcher {
 
         @Override
         public FileVisitResult visitFileFailed(Path file, IOException exc) {
+            LOGGER.error(exc, "Failed to visit file: {}", file);
             return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            if (exc != null) LOGGER.error(exc, "Failed to visit directory: {}", dir);
             return FileVisitResult.CONTINUE;
         }
     }
