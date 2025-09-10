@@ -30,6 +30,8 @@ import javafx.scene.Parent;
 import javafx.scene.layout.Pane;
 import org.joor.Reflect;
 
+import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
+
 /// Wrapper class that represents a hot swappable component at runtime identified by a unique [#id()], see [HotSwapService].
 /// It also wraps the generic [Parent] instance that needs to be swapped and undergoes four phases during the reload:
 /// 1) The reload is triggered by [HotSwapService#reload(String)] and calls [#reload()].
@@ -68,7 +70,7 @@ public class HotSwappable<P extends Parent> {
         Parent parent = ((Parent) o).getParent();
         // Try replacing in parent container...
         if (parent instanceof Pane pane) {
-            HotSwapService.logger().debug("Replacing component in parent container: {}", pane);
+            logger().trace("Replacing component in parent container: {}", pane);
             ObservableList<Node> children = pane.getChildren();
             int idx = children.indexOf(o);
             if (idx >= 0) Platform.runLater(() -> children.set(idx, ((Parent) n)));
@@ -80,7 +82,7 @@ public class HotSwappable<P extends Parent> {
             Optional.ofNullable(((Parent) o).getScene())
                 .filter(s -> s.getRoot() == o)
                 .ifPresent(s -> {
-                    HotSwapService.logger().debug("Replacing root of scene: {}", s);
+                    logger().trace("Replacing root of scene: {}", s);
                     s.setRoot(((Parent) n));
                 }));
     };
@@ -90,7 +92,7 @@ public class HotSwappable<P extends Parent> {
             Class<? extends Parent> klass = ((Parent) p).getClass();
             return Reflect.onClass(klass).create().get();
         } catch (Exception ex) {
-            HotSwapService.logger().error(ex, "Failed to instantiate class: {}", p.getClass());
+            logger().error(ex, "Failed to instantiate class: {}", p.getClass());
             return null;
         }
     };
@@ -135,25 +137,28 @@ public class HotSwappable<P extends Parent> {
     /// 4) Update the [ChildrenTracker] if enabled
     protected void reload() {
         try {
+            logger().debug("Reloading component: {}", this);
+
             Parent oldInstance = parent;
             P newInstance = instantiate();
+            if (newInstance == null) return;
 
-            HotSwapService.logger().debug("Cloning state of component: {}", id);
+            logger().info("Cloning state...");
             stateCloner.accept(parent, newInstance);
 
-            HotSwapService.logger().debug("Reloading component: {}", id);
+            logger().info("Swapping...");
             onReload.accept(parent, newInstance);
             this.parent = newInstance;
 
             if (tracker != null) tracker.update(oldInstance, newInstance);
         } catch (Exception ex) {
-            HotSwapService.logger().error(ex, "Failed to reload component: {}", id);
+            logger().error(ex, "Failed to reload component: {}", id);
         }
     }
 
     /// Uses the specified [#getInstantiator()] to create a new instance of the wrapped parent.
     protected P instantiate() {
-        HotSwapService.logger().debug("Instantiating component: {}", id);
+        logger().info("Instantiating...");
         return instantiator.apply(parent);
     }
 
