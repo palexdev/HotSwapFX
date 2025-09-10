@@ -18,15 +18,13 @@
 
 package io.github.palexdev.hotswapfx;
 
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.tinylog.Logger;
 
@@ -37,6 +35,8 @@ public class Utils {
     //================================================================================
     private static List<Path> classpath;
 
+    private static final Map<Path, String> classNamesCache = new HashMap<>();
+
     //================================================================================
     // Constructors
     //================================================================================
@@ -46,12 +46,21 @@ public class Utils {
     // Static Methods
     //================================================================================
 
-    /// Given the path to a class file, tries to convert it to a valid fully qualified class name by removing the extension
-    /// and replacing the file separators with a dot.
+    /// Given the path to a class file, tries to convert it to a valid fully qualified class name.
+    ///
+    /// This is possible thanks to the awesome new [ClassFile] API.
+    ///
+    /// Note: class names are also cached for faster lookups.
     public static String getClassName(Path path) {
-        String ts = path.toString();
-        ts = ts.substring(0, ts.length() - 6);
-        return ts.replace(FileSystems.getDefault().getSeparator(), ".");
+        return classNamesCache.computeIfAbsent(path, p -> {
+            try {
+                ClassModel model = ClassFile.of().parse(path);
+                return model.thisClass().asInternalName().replace('/', '.');
+            } catch (Exception ex) {
+                return null;
+            }
+        });
+
     }
 
     /// @return the value of the system property `java.class.path` split by colon, so an array with each individual path
