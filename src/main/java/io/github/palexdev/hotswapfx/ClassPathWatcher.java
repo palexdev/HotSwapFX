@@ -30,7 +30,7 @@ import org.tinylog.Logger;
 import org.tinylog.TaggedLogger;
 
 /// This core class is responsible for watching the class path directories given by [Utils#getClassPathDirectories()]
-/// and any extra path added through [#addExtraWatchPath(Path)].<br >
+/// and any extra path registered on [HotSwapServiceSettings#EXTRA_WATCH_PATHS].<br >
 /// The watch mechanism is based on polling which runs at a fixed delay
 /// (from each task, see [ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)]).<br >
 ///
@@ -50,15 +50,6 @@ public class ClassPathWatcher {
     // Static Properties
     //================================================================================
     private static final TaggedLogger LOGGER = Logger.tag("ClassPathWatcher");
-    private static final Set<Path> EXTRA_WATCH_PATHS = new HashSet<>();
-
-    public static void addExtraWatchPath(Path path) {
-        EXTRA_WATCH_PATHS.add(path);
-    }
-
-    public static void addExtraWatchPath(String path) {
-        EXTRA_WATCH_PATHS.add(Path.of(path));
-    }
 
     //================================================================================
     // Properties
@@ -88,7 +79,7 @@ public class ClassPathWatcher {
             );
         }
         watchPaths.addAll(directories);
-        watchPaths.addAll(EXTRA_WATCH_PATHS);
+        watchPaths.addAll(HotSwapServiceSettings.EXTRA_WATCH_PATHS);
     }
 
     //================================================================================
@@ -96,12 +87,12 @@ public class ClassPathWatcher {
     //================================================================================
 
     /// Starts the watcher asynchronously on a daemon thread.<br >
-    /// The polling executes by default at delays specified by [HotSwapService#POLL_RATE].
+    /// The polling executes by default at delays specified by [HotSwapServiceSettings#POLL_RATE].
     public void start() {
         task = executor.scheduleWithFixedDelay(
             this::scan,
             0,
-            HotSwapService.POLL_RATE,
+            HotSwapServiceSettings.POLL_RATE,
             TimeUnit.MILLISECONDS
         );
     }
