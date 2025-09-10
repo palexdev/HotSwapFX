@@ -22,17 +22,15 @@ import java.nio.file.Path;
 import java.util.*;
 
 import io.github.palexdev.hotswapfx.ServiceHook.HookType;
-import io.github.palexdev.watcher.DirectoryChangeEvent;
-import io.github.palexdev.watcher.DirectoryChangeEvent.EventType;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import org.tinylog.Logger;
-import org.tinylog.TaggedLogger;
+
+import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
 
 /// The core of this project, a singleton service that watches the class path for changes (using [ClassPathWatcher]) and
 /// reloads the registered components as needed.
 ///
-/// There is much going on here, but before discussing details, let's see how the architecture and core mechanics.
+/// There is much going on here, but before discussing details, let's explore the architecture and the core mechanics.
 ///
 /// ### Concept & Architecture<br >
 /// The general idea is to allow developers reloading their JavaFX views without the need to recompile and rerun the
@@ -49,8 +47,8 @@ import org.tinylog.TaggedLogger;
 ///
 /// The service can be started by calling the [#start()] method, but only if the system property `HOTSWAPFX` is set to true.
 /// This is a convenient way to disable the mechanism in production.<br >
-/// You can stop the service by calling [#stop()] and restart if later if you need it again. If instead you don't need the
-/// service anymore you should call [#dispose()].
+/// You can stop the service by calling [#stop()] and restart it later if you need it again. If instead you don't need the
+/// service anymore, you should call [#dispose()].
 ///
 /// Components are registered on this service with a unique id. To allow watching multiple instances of the same component,
 /// each class is associated with a [Set] of ids. When a class changes and the related components need to be reloaded,
@@ -85,10 +83,8 @@ import org.tinylog.TaggedLogger;
 /// 1) Java's [ClassLoaders][ClassLoader] cache the class they load. For this project this is not good because by reloading
 /// an already defined class, there's the risk of not viewing any change or desynchronization. The service uses a new
 /// class loader every time a class needs to be reloaded, see [HotSwapClassLoader].
-/// 2) Early testing on a toy app shows that the service is stable enough. However, it may happen from time to time that
-/// your view seems to be desynchronized with your changes. I could not find the precise culprit for this, but it seems
-/// like delaying the reload process by a little amount of time makes things much more stable. Since I don't know if the
-/// delay depends on the machine the service runs on, I let it configurable as a static parameter, see [#RELOAD_DELAY]
+/// 2) The class path watching system is based on polling. By default the poll rate is set to 1 second, but it can be changed
+/// by setting the [#POLL_RATE] variable.
 /// 3) The service seems to work only if running in debug mode. I don't really know why, since we're technically not
 /// relying on some internal hot swap mechanism. We watch the class path, and when something changes, we straight up reload
 /// it reading its bytes and defining a new class. That said, I found it very convenient when used in
@@ -97,33 +93,23 @@ public class HotSwapService {
     //================================================================================
     // Static Members
     //================================================================================
-    private static final HotSwapService INSTANCE = new HotSwapService();
-    private static final TaggedLogger LOGGER = Logger.tag("HotSwapService");
-
-    /// There's a very weird situation going on...<br >
-    /// Sometimes it may happen that the view and the actual class content are desynchronized.
-    /// Meaning that you won't see the reload, and if you make another change, you will see the reload for the previous
-    /// change. I could not figure out why this happens, it's so very strange.
-    ///
-    /// I tried adding a delay before the actual reload with [Thread#sleep(long)], and it seems to be much more stable.
-    /// However, assuming this has something to do with the speed of the machine, I left the sleep time as a configurable
-    /// parameter through this property. If you start experiencing such weird issue, try increasing the reload delay.
-    public static long RELOAD_DELAY = 200;
-
     public static final String SYSTEM_FLAG = "HOTSWAPFX";
+
+    /// This value determines the delay between each scan task of [ClassPathWatcher].<br >
+    /// Values are in milliseconds, by default, it's 1000 ms.
+    ///
+    /// It takes effect only when the service is started. If you change this while it's already running, it won't have any effect!
+    public static final long POLL_RATE = 1000;
+
+    private static final HotSwapService INSTANCE = new HotSwapService();
 
     public static HotSwapService instance() {
         return INSTANCE;
     }
 
-    public static TaggedLogger logger() {
-        return LOGGER;
-    }
-
     //================================================================================
     // Properties
     //================================================================================
-    private final HotSwapClassLoader reloader = new HotSwapClassLoader();
     private ClassPathWatcher watcher;
 
     private final Map<ClassWrapper, Set<String>> idsMap = new HashMap<>();
@@ -141,32 +127,29 @@ public class HotSwapService {
     //================================================================================
 
     /// Starts the service if it's not already running and the `HOTSWAPFX` system property is set to `true`.<br >
-    /// Creates the [ClassPathWatcher] and sets it up to call [#reload(DirectoryChangeEvent)] when any change occurs.
+    /// Creates the [ClassPathWatcher] starts it.
     ///
     /// Issues a warning if the Java process is not running in debug mode.
     public void start() {
         if (isRunning()) {
-            LOGGER.warn("The HotSwapService is already running.");
+            logger().warn("The HotSwapService is already running.");
             return;
         }
 
         if (!Utils.isServiceEnabled()) {
-            LOGGER.warn("Cannot start HotSwapService as it is disabled.\nSet the {} system property to 'true' to enable it", SYSTEM_FLAG);
+            logger().warn("Cannot start HotSwapService as it is disabled.\nSet the {} system property to 'true' to enable it", SYSTEM_FLAG);
             return;
         }
 
         if (!Utils.isDebuggerPresent()) {
-            LOGGER.warn(
+            logger().warn(
                 "HotSwapService is about to start but it seems like the JVM is not running in debug mode. " +
                 "HotSwap functionality may not work."
             );
         }
 
         watcher = new ClassPathWatcher();
-        watcher.setOnEvent(this::reload);
         watcher.start();
-        if (watcher.getWatcher() == null)
-            LOGGER.error("Failed to start the HotSwapService");
     }
 
     /// Stops the service if it's running by stopping the [ClassPathWatcher].
@@ -189,7 +172,7 @@ public class HotSwapService {
     }
 
     public boolean isRunning() {
-        return watcher != null && watcher.getWatcher() != null;
+        return watcher != null;
     }
 
     // Register/Unregister
@@ -198,12 +181,12 @@ public class HotSwapService {
     public void register(HotSwappable<? extends Parent> component) {
         Set<String> ids = idsMap.computeIfAbsent(ClassWrapper.wrap(component.parent().getClass()), _ -> new HashSet<>());
         if (!ids.add(component.id())) {
-            LOGGER.error("Component with ID: {} is already registered", component.id());
+            logger().error("Component with ID: {} is already registered", component.id());
             return;
         }
 
         componentsMap.put(component.id(), component);
-        LOGGER.debug("Registered component: {})", component);
+        logger().debug("Registered component: {})", component);
     }
 
     /// Convenience method to register a component by an id and the initial [Parent] instance that needs to be swapped.
@@ -253,7 +236,7 @@ public class HotSwapService {
         if (full) {
             Set<String> ids = idsMap.remove(klass);
             ids.forEach(id -> componentsMap.remove(id).dispose());
-            LOGGER.debug("Unregistered all components of class: {})", klass);
+            logger().debug("Unregistered all components of class: {})", klass);
             return;
         }
 
@@ -268,76 +251,80 @@ public class HotSwapService {
     public void reload(String id) {
         HotSwappable<? extends Parent> component = componentsMap.get(id);
         if (component == null) {
-            LOGGER.error("No component registered with ID: {}", id);
+            logger().error("No component registered with ID: {}", id);
             return;
         }
         component.reload();
     }
 
-    /// This is called by the [ClassPathWatcher] whenever something happens on the class path. By design, we filter events
-    /// to modified files only, [EventType#MODIFY].
+    /// Runs [#reload(Path)] on all the given paths.
+    protected void reload(Path... paths) {
+        for (Path path : paths) {
+            reload(path);
+        }
+    }
+
+    /// This core method is responsible for reloading all the registered components associated to the given path.
     ///
     /// Here are all the phases of this reload process:
     /// 1) Notifies early hooks
-    /// 2) Filters for events happened on '.class' files
+    /// 2) Filters for '.class' files (excludes module-info.class)
     /// 3) Converts the file path to a fully qualified name with [Utils#getClassName(Path)]
-    /// 4) Reloads the class with [HotSwapClassLoader] and wraps it in a [ClassWrapper]
-    /// 5) Proceeds only if the class is a JavaFX [Node]
-    /// 6) Sleeps for a short amount of time, see [#RELOAD_DELAY]
+    /// 4) Checks if there are any registered components associated to the class
+    /// 5) Reloads the class by calling [ClassWrapper#reload(Path)]
+    /// 6) Proceeds only if the class is a JavaFX [Node]
     /// 7) Notifies late hooks
-    /// 8) Retrieves all the ids associated to the reloaded class. Then for each id retrieves the associated component
-    /// and starts the reload process by calling [#reload(String)]
-    protected void reload(DirectoryChangeEvent e) {
-        if (e.eventType() == EventType.MODIFY) {
-            LOGGER.debug("Notifying early hooks...");
-            notifyHooks(HookType.ON_FILE, e);
+    /// 8) On all the found ids calls [#reload(String)]
+    protected void reload(Path path) {
+        logger().trace("Notifying early hooks...");
+        notifyHooks(HookType.ON_FILE, path);
 
-            if (!e.path().toString().endsWith(".class")) return;
-            LOGGER.info("File modified: " + e.path() + ", trying to hotswap...");
+        String sPath = path.toString();
+        if (!sPath.endsWith(".class") || sPath.endsWith("module-info.class")) return;
 
-            String className = Utils.getClassName(e.rootPath().relativize(e.path()));
-            try {
-                ClassWrapper klass = ClassWrapper.wrap(reloader.reload(className, e.path()));
-                if (klass.klass() == null) return;
-
-                if (!Node.class.isAssignableFrom(klass.klass())) {
-                    LOGGER.trace("Class {} is not a Node, skipping...", klass);
-                    return;
-                }
-
-                Thread.sleep(RELOAD_DELAY);
-                LOGGER.debug("Class to hotswap: {}", klass);
-
-                LOGGER.debug("Notifying class hooks...");
-                notifyHooks(HookType.ON_CLASS, klass);
-
-                Set<String> ids = idsMap.get(klass);
-                if (ids == null || ids.isEmpty()) {
-                    LOGGER.debug("No registered components found for class: {}", className);
-                } else {
-                    ids.forEach(this::reload);
-                }
-            } catch (Exception ex) {
-                LOGGER.error(ex, "Failed to reload class: {}", className);
-            }
+        String className = Utils.getClassName(path);
+        if (className == null) {
+            logger().error("Failed to get class name from path: {}", path);
+            return;
         }
+
+        ClassWrapper classWrapper = new ClassWrapper(className);
+        Set<String> ids = idsMap.get(classWrapper);
+        if (ids == null || ids.isEmpty()) {
+            logger().info("No registered components found for class: {}", className);
+            return;
+        }
+
+        Class<?> klass = classWrapper.reload(path);
+        if (klass == null) return;
+
+        if (!Node.class.isAssignableFrom(klass)) {
+            logger().info("Class {} is not a Node, skipping...", klass);
+            return;
+        }
+
+        logger().trace("Notifying class hooks...");
+        notifyHooks(HookType.ON_CLASS, classWrapper);
+
+        ids.forEach(this::reload);
     }
 
     // Hooks
 
-    /// Registers an early hook into the [#reload(DirectoryChangeEvent)] process.
-    public void earlyHook(ServiceHook<DirectoryChangeEvent> hook) {
+    /// Registers an early hook into the [#reload(Path)] process.
+    public void earlyHook(ServiceHook<Path> hook) {
         hooks.computeIfAbsent(HookType.ON_FILE, _ -> new LinkedHashSet<>()).add(hook);
     }
 
-    /// Registers a late hook into the [#reload(DirectoryChangeEvent)] process.
+    /// Registers a late hook into the [#reload(Path)] process.
     public void lateHook(ServiceHook<ClassWrapper> hook) {
         hooks.computeIfAbsent(HookType.ON_CLASS, _ -> new LinkedHashSet<>()).add(hook);
     }
 
-    /// Unregisters the given hook from the [#reload(DirectoryChangeEvent)] process and calls [ServiceHook#dispose()]
+    /// Unregisters the given hook from the [#reload(Path)] process and calls [ServiceHook#dispose()]
     public void removeHook(ServiceHook<?> hook) {
         hooks.values().forEach(set -> set.remove(hook));
+        hook.dispose();
     }
 
     /// Notifies all registered hooks of the given type, with the given data.
