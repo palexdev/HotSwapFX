@@ -40,13 +40,12 @@ import org.tinylog.TaggedLogger;
 /// to a collection. When all virtual threads have finished, all the modified paths are collected in a single collection,
 /// and the reload is sent as a batch to [HotSwapService#reload(Path[])].
 ///
+/// @see HotSwapServiceSettings
 /// @since 24.2.0 Previously, the service was using a facade over the [WatchService] API. However, that works like crap.
 /// Even with file hashing, events were sometimes randomly lost. And that led to registered nodes to not be reloaded and
 /// swapper. I grew tired of that bullshit, and so I implemented this polling mechanism. It's much, much more reliable, but
 /// it could be slightly more heavy on performance.
 /// (Though the [WatchService] API also kinda relies on polling, so it also may not')
-///
-/// @see HotSwapServiceSettings
 public class ClassPathWatcher {
     //================================================================================
     // Static Properties

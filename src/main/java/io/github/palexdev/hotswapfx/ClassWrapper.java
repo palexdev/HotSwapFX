@@ -26,7 +26,7 @@ import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
 /// Because the service reloads classes from the classpath, two classes with the same fully qualified name will be different.<br >
 /// This wrapper solves this issue by wrapping a class' fully qualified name and the related class.<br >
 /// The latter is initially `null`, and it's loaded only when requested by the service, [#reload(Path)].
-/// 
+///
 /// The benefit of this change is that when a reload request arrives from the [ClassPathWatcher], the [HotSwapService]
 /// can check whether a class is registered before reloading it from the disk, which is a costly operation. Especially
 /// considering that many classes may have changed, but only a few may be registered on the service.<br >
