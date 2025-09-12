@@ -48,7 +48,13 @@ public class HotSwapServiceSettings {
         EXTRA_WATCH_PATHS.add(path);
     }
 
-    public static void addExtraWatchPath(String path) {
-        EXTRA_WATCH_PATHS.add(Path.of(path));
+    public static void addExtraWatchPaths(String... paths) {
+        addExtraWatchPaths(Arrays.stream(paths)
+            .map(Path::of)
+            .toArray(Path[]::new));
+    }
+
+    public static void setFileComparisonStrategy(FileComparisonStrategy strategy) {
+        FILE_COMPARISON_STRATEGY = strategy;
     }
 }
