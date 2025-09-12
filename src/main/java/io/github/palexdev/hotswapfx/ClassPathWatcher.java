@@ -45,6 +45,8 @@ import org.tinylog.TaggedLogger;
 /// swapper. I grew tired of that bullshit, and so I implemented this polling mechanism. It's much, much more reliable, but
 /// it could be slightly more heavy on performance.
 /// (Though the [WatchService] API also kinda relies on polling, so it also may not')
+///
+/// @see HotSwapServiceSettings
 public class ClassPathWatcher {
     //================================================================================
     // Static Properties
@@ -147,7 +149,7 @@ public class ClassPathWatcher {
             byte[] hash = FileHasher.hash(p);
             FileAttributes newAttr = new FileAttributes(lastMillis, size, hash);
             FileAttributes prevAttr = lastAttributes.put(p, newAttr);
-            if (prevAttr != null && (!Objects.equals(prevAttr, newAttr))) {
+            if (prevAttr != null && !HotSwapServiceSettings.FILE_COMPARISON_STRATEGY.equals(prevAttr, newAttr)) {
                 LOGGER.debug("File modified: {}, adding to batch", p);
                 modified.add(p);
             }
@@ -165,28 +167,13 @@ public class ClassPathWatcher {
     /// - the hash
     ///
     /// It's used by the `ClassPathWatcher` to determine if a file has changed since the last scan.<br >
-    /// Hashes are compared as a last resort if the date and size fail to identify a change.
     ///
-    /// @see FileHasher#equals(byte[], byte[])
-    record FileAttributes(
+    /// The comparison algorithm is determined by this setting: [HotSwapServiceSettings#FILE_COMPARISON_STRATEGY]
+    public record FileAttributes(
         long lastModified,
         long size,
         byte[] hash
-    ) {
-        @Override
-        public boolean equals(Object o) {
-            if (o == null || getClass() != o.getClass()) return false;
-            FileAttributes that = (FileAttributes) o;
-            return size == that.size &&
-                   lastModified == that.lastModified &&
-                   (FileHasher.equals(that.hash(), hash()));
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(lastModified, size, Arrays.hashCode(hash));
-        }
-    }
+    ) {}
 
     static class FileWalker implements FileVisitor<Path> {
         private final BiConsumer<Path, BasicFileAttributes> onFile;

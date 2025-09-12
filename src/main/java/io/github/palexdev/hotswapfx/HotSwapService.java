@@ -89,6 +89,8 @@ import static io.github.palexdev.hotswapfx.ServiceLogger.logger;
 /// relying on some internal hot swap mechanism. We watch the class path, and when something changes, we straight up reload
 /// it reading its bytes and defining a new class. That said, I found it very convenient when used in
 /// [IntelliJ](https://www.jetbrains.com/idea/) with [this plugin](https://plugins.jetbrains.com/plugin/14832-single-hotswap).
+///
+/// @see HotSwapServiceSettings
 public class HotSwapService {
     //================================================================================
     // Static Members

@@ -19,6 +19,8 @@
 package io.github.palexdev.hotswapfx;
 
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -44,8 +46,13 @@ public class HotSwapServiceSettings {
     /// should be supported too but are untested.
     public static final Set<Path> EXTRA_WATCH_PATHS = new HashSet<>();
 
-    public static void addExtraWatchPath(Path path) {
-        EXTRA_WATCH_PATHS.add(path);
+    /// Default is [FileComparisonStrategy#HASH]
+    ///
+    /// @see FileComparisonStrategy
+    public static FileComparisonStrategy FILE_COMPARISON_STRATEGY = FileComparisonStrategy.HASH;
+
+    public static void addExtraWatchPaths(Path... paths) {
+        Collections.addAll(EXTRA_WATCH_PATHS, paths);
     }
 
     public static void addExtraWatchPaths(String... paths) {
