@@ -142,16 +142,14 @@ public class ClassPathWatcher {
         if (!Files.isDirectory(path)) return Collections.emptySet();
         Set<Path> modified = new HashSet<>();
         Files.walkFileTree(path, new FileWalker((p, a) -> {
-            if (p.toString().endsWith(".class")) {
-                long lastMillis = a.lastModifiedTime().toMillis();
-                long size = a.size();
-                byte[] hash = FileHasher.hash(p);
-                FileAttributes newAttr = new FileAttributes(lastMillis, size, hash);
-                FileAttributes prevAttr = lastAttributes.put(p, newAttr);
-                if (prevAttr != null && (!Objects.equals(prevAttr, newAttr))) {
-                    LOGGER.debug("File modified: {}, adding to batch", p);
-                    modified.add(p);
-                }
+            long lastMillis = a.lastModifiedTime().toMillis();
+            long size = a.size();
+            byte[] hash = FileHasher.hash(p);
+            FileAttributes newAttr = new FileAttributes(lastMillis, size, hash);
+            FileAttributes prevAttr = lastAttributes.put(p, newAttr);
+            if (prevAttr != null && (!Objects.equals(prevAttr, newAttr))) {
+                LOGGER.debug("File modified: {}, adding to batch", p);
+                modified.add(p);
             }
         }));
         return modified;
