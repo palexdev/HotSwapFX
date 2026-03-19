@@ -1,0 +1,36 @@
+plugins {
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
+}
+
+version = "$runtime"
+
+dependencies {
+    implementation(project(':core'))
+    implementation(project(':orchestration'))
+    implementation "net.bytebuddy:byte-buddy:$byteBuddy"
+    implementation "org.tinylog:tinylog-api:$tinylog"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+
+    testImplementation "org.mockito:mockito-core:$mockito"
+}
+
+tasks.withType(Jar).configureEach {
+    manifest.attributes(Map.of(
+            "Premain-Class", "io.github.palexdev.hotswapfx.runtime.HotSwapAgent",
+            "Agent-Class", "io.github.palexdev.hotswapfx.runtime.HotSwapAgent",
+            "Can-Redefine-Classes", "true",
+            "Can-Retransform-Classes", "true"
+    ))
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-runtime") }
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.controls']
+    configurations = ['api']
+}
