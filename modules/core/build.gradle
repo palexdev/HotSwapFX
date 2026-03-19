@@ -1,0 +1,22 @@
+plugins {
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
+}
+
+version = "$core"
+
+dependencies {
+    implementation "org.tinylog:tinylog-api:$tinylog"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-core") }
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.controls']
+    configurations = ['api']
+}
