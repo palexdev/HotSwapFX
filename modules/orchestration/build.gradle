@@ -1,0 +1,14 @@
+version = "$orchestration"
+
+dependencies {
+    implementation "com.esotericsoftware:kryo:$kryo"
+    implementation "io.github.palexdev:kryonet:$kryonet"
+    implementation "org.tinylog:tinylog-api:$tinylog"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-orchestration") }
+}
