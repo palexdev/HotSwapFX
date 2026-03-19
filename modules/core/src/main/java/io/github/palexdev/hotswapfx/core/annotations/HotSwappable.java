@@ -11,5 +11,5 @@ import java.lang.annotation.Target;
 public @interface HotSwappable {
 
     /// When any of the dependencies specified by this change, the marked type is also reloaded by the service.
-    Class<?>[] dependencies();
+    Class<?>[] dependencies() default {};
 }
