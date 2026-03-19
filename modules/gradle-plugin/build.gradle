@@ -1,0 +1,24 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+version = "$plugin"
+
+dependencies {
+    implementation(project(":orchestration"))
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("mfxcore") }
+}
+
+gradlePlugin {
+    plugins {
+        hotswapfx {
+            id = 'io.github.palexdev.hotswapfx-plugin'
+            implementationClass = 'io.github.palexdev.hotswapfx.gradle.HotSwapPlugin'
+        }
+    }
+}
