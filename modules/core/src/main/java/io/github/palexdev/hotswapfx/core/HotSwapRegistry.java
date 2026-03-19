@@ -19,8 +19,8 @@ class HotSwapRegistry {
     // Properties
     //================================================================================
 
-    private final Map<String, Set<TrackedRef>> registry = new HashMap<>();
-    private final Map<String, Set<String>> reverseDeps = new HashMap<>();
+    private final Map<Class<?>, Set<TrackedRef>> registry = new HashMap<>();
+    private final Map<Class<?>, Set<Class<?>>> reverseDeps = new HashMap<>();
     private final ReferenceQueue<Node> refQueue = new ReferenceQueue<>();
 
     //================================================================================
@@ -34,29 +34,29 @@ class HotSwapRegistry {
     /// If the type marked by [HotSwappable] has dependencies, those are also registered.
     public void register(Node node) {
         purgeStale();
-        String className = node.getClass().getName();
-        registry.computeIfAbsent(className, k -> new HashSet<>())
+        Class<? extends Node> klass = node.getClass();
+        registry.computeIfAbsent(klass, _ -> new HashSet<>())
             .add(new TrackedRef(node, refQueue));
-        ofNullable(node.getClass().getAnnotation(HotSwappable.class))
+        ofNullable(klass.getAnnotation(HotSwappable.class))
             .map(HotSwappable::dependencies)
             .ifPresent(deps -> {
                 for (Class<?> dep : deps) {
-                    reverseDeps.computeIfAbsent(dep.getName(), k -> new HashSet<>())
-                        .add(className);
+                    reverseDeps.computeIfAbsent(dep, _ -> new HashSet<>())
+                        .add(klass);
                 }
             });
     }
 
     /// @return all the registered dependencies for the given class
-    public Set<String> dependenciesOf(Class<?> klass) {
-        Set<String> deps = new LinkedHashSet<>();
-        collectOwners(klass.getName(), deps);
+    public Set<Class<?>> dependenciesOf(Class<?> klass) {
+        Set<Class<?>> deps = new LinkedHashSet<>();
+        collectOwners(klass, deps);
         return deps;
     }
 
-    private void collectOwners(String className, Set<String> visited) {
-        Set<String> owners = reverseDeps.getOrDefault(className, Collections.emptySet());
-        for (String owner : owners) {
+    private void collectOwners(Class<?> klass, Set<Class<?>> visited) {
+        Set<Class<?>> owners = reverseDeps.getOrDefault(klass, Collections.emptySet());
+        for (Class<?> owner : owners) {
             if (visited.add(owner)) {
                 collectOwners(owner, visited);
             }
@@ -68,14 +68,14 @@ class HotSwapRegistry {
     /// This is crucial when swapping a node in the scenegraph because the old object removed from it must not be tracked anymore.
     /// The new node is registered automatically.
     public void unregister(Node node) {
-        var refs = registry.get(node.getClass().getName());
+        var refs = registry.get(node.getClass());
         if (refs != null) refs.removeIf(r -> r.get() == node);
     }
 
     /// @return all the tracked instances for the given class
     public List<Node> getInstances(Class<?> klass) {
         purgeStale();
-        var refs = registry.getOrDefault(klass.getName(), Collections.emptySet());
+        var refs = registry.getOrDefault(klass, Collections.emptySet());
         return refs.stream()
             .map(TrackedRef::get)
             .filter(Objects::nonNull)
@@ -86,7 +86,7 @@ class HotSwapRegistry {
     private void purgeStale() {
         TrackedRef unalive;
         while ((unalive = (TrackedRef) refQueue.poll()) != null) {
-            var refs = registry.get(unalive.className);
+            var refs = registry.get(unalive.theClass);
             if (refs != null) refs.remove(unalive);
         }
     }
@@ -96,10 +96,10 @@ class HotSwapRegistry {
     //================================================================================
 
     static class TrackedRef extends WeakReference<Node> {
-        final String className;
+        final Class<?> theClass;
         TrackedRef(Node node, ReferenceQueue<Node> queue) {
             super(node, queue);
-            this.className = node.getClass().getName();
+            this.theClass = node.getClass();
         }
     }
 }

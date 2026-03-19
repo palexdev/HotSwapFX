@@ -81,7 +81,7 @@ public class HotSwapService {
         registry.register(node);
     }
 
-    public Set<String> dependenciesOf(Class<?> klass) {
+    public Set<Class<?>> dependenciesOf(Class<?> klass) {
         return registry.dependenciesOf(klass);
     }
 
