@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+    }
+}
+
+include 'core'
+include 'gradle-plugin'
+include 'orchestration'
+include 'runtime'
+include 'showcase'
+
+rootProject.name = 'HotSwapFX'
+rootProject.children.each { project ->
+    {
+        project.projectDir = file("modules/$project.name")
+    }
+}

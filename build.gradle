@@ -1,0 +1,60 @@
+plugins {
+    id 'java-library'
+    id 'com.vanniktech.maven.publish' version "$mavenPublishPlugin" apply false
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: "com.vanniktech.maven.publish"
+
+    // Remove vanniktech nonsense
+    gradle.taskGraph.whenReady { graph ->
+        if (graph.hasTask(plainJavadocJar)) {
+            plainJavadocJar.enabled = false
+        }
+    }
+
+    group 'io.github.palexdev'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+
+        maven { url = 'https://repo.gradle.org/gradle/libs-releases' }
+    }
+
+    dependencies {
+        testImplementation platform("org.junit:junit-bom:$junit")
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    }
+
+
+    compileJava {
+        sourceCompatibility = "$jdk"
+        targetCompatibility = "$jdk"
+    }
+
+    test {
+        useJUnitPlatform()
+        testLogging.showStandardStreams = true
+        // FIXME well, this depends on the Gradle team if they decide to revert a dumb decision
+        failOnNoDiscoveredTests = false
+    }
+
+    mavenPublishing {
+        publishToMavenCentral()
+        signAllPublications()
+    }
+}
+
+tasks.register("publishAllToLocal").configure {
+    group("publishing")
+    finalizedBy(
+            "core:publishMavenPublicationToMavenLocal",
+            "runtime:publishMavenPublicationToMavenLocal",
+            "orchestration:publishMavenPublicationToMavenLocal",
+            "gradle-plugin:publishPluginMavenPublicationToMavenLocal",
+            "gradle-plugin:publishHotswapfxPluginMarkerMavenPublicationToMavenLocal"
+    )
+}
