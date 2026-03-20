@@ -1,0 +1,29 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
+    id 'io.github.palexdev.hotswapfx-plugin' version '25+'
+}
+
+repositories {
+    mavenLocal()
+}
+
+dependencies {
+    implementation "io.github.palexdev:hotswapfx-core:25+"
+    implementation "io.github.palexdev:hotswapfx-runtime:25+"
+    implementation "io.github.palexdev:mfxcomponents:25+"
+    implementation "io.github.palexdev:imcache:21+"
+    implementation "org.tinylog:tinylog-api:$tinylog"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+}
+
+
+application {
+    mainClass = 'io.github.palexdev.hotswapfx.showcase.weather.WeatherApp'
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.controls', 'javafx.fxml']
+    configurations = ['implementation']
+}
