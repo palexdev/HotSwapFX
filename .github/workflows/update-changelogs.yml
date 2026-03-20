@@ -1,0 +1,25 @@
+name: Update Changelogs
+
+on:
+  workflow_call: { }
+
+jobs:
+  update-changelogs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@main
+        with:
+          distribution: jetbrains
+          java-version: 25
+
+      - name: Give permissions to script
+        run: chmod +x scripts/UpdateChangelogs
+
+      - name: Run script
+        run: java --source 25 ./scripts/UpdateChangelogs
