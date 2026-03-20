@@ -71,6 +71,7 @@ public class HotSwapAgent {
         // Phase 1 - Redefine
         Logger.info("Reloading classes: {}", request.changes());
         ClassDefinition[] toRedefine = request.changes().keySet().stream()
+            .filter(p -> !"module-info.class".equals(p.getFileName().toString()))
             .map(p -> {
                 try {
                     byte[] classBytes = Files.readAllBytes(p);
