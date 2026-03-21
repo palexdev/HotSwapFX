@@ -1,172 +1,276 @@
-#!/usr/local/bin/java --source 21
+#!/usr/local/bin/java --source 25
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+//================================================================================
+// CONVENTIONS
+//================================================================================
+// Release commits: :bookmark: module@version, module2@version2, ...
+
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
+//@formatter:off
 public class Release {
-    // Settings
+    static final Logger LOGGER = new Logger();
+    static LogLevel LOG_LEVEL = LogLevel.WARN;
     static boolean DRY_RUN = false;
 
-    static final Path GRADLEW;
+    static final Path GRADLEW = Paths.get(os() == OS.Windows ? "gradlew.bat" : "gradlew");
 
-    static final String[] modules = new String[] {
-        "core",
-        "gradle-plugin",
-        "orchestration",
-        "runtime"
-    };
-
-    static {
-        if (os() == OS.Windows) {
-            GRADLEW = Paths.get("gradlew.bat");
-        } else {
-            GRADLEW = Paths.get("gradlew");
-        }
+    static void main(String[] args) {
+        parseArgs(args);
+        run();
     }
 
-    public static void main(String[] args) {
-        Set<String> argSet = new LinkedHashSet<>(Arrays.asList(args));
-        if (argSet.contains("--help") || argSet.contains("-h")) {
-            printHelp();
-            return;
-        }
-        if (argSet.contains("--dry-run")) DRY_RUN = true;
-        new Release().run();
-    }
-
-    static void printHelp() {
-        String message = """
-            This script is responsible for publishing modules on Maven.
-            Fetches the last commit (which is expected to be a release commit, marked by the :bookmark: gitmoji), parses
-            the released modules list from the header, and then for each runs:
-                <gralew> :<module>:publishAndReleaseToMavenCentral
-            
-            ** Arguments **
-              • --help, -h: Prints this help message.
-              • --dry-run : Prints the modules that would be released, but does not actually run the release process.
-            """;
-        System.out.println(message);
-    }
-
-    void run() {
+    static void run() {
         try {
-            // Get latest commit message
-            String commit = exec(false, "git", "log", "HEAD^..HEAD", "--pretty=%B").out();
-            List<ModuleRelease> modules = parseReleases(commit);
-            if (modules.isEmpty()) {
+            Commit head = new GitHeadCommitCommand().exec();
+            LOGGER.debug("Head commit: [%s] %s".formatted(head.hash(), head.header()));
+
+            List<ModuleRelease> releases = ModuleRelease.parseAll(head);
+            if (releases.isEmpty()) {
                 System.out.println("✅ No modules to release.");
                 return;
             }
 
-            if (!DRY_RUN) {
-                modules.forEach(this::release);
-                System.out.println("🎉 Release process completed.");
-            } else {
-                StringBuilder sb = new StringBuilder("{\n");
-                modules.forEach(m ->
-                    sb.append("  [name=").append(m.module())
-                        .append(", ")
-                        .append("version=").append(m.version())
-                        .append("],\n")
-                );
-                sb.append("}\n");
-                System.out.println("Modules to release: " + sb);
+            if (DRY_RUN) {
+                System.out.println("Modules to release:");
+                releases.forEach(r -> System.out.printf("  - %s@%s%n",r.module(), r.version()));
+                return;
             }
+
+            releases.forEach(Release::release);
+            System.out.println("🎉 Release process completed.");
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOGGER.error(ex);
         }
     }
 
-    void release(ModuleRelease module) {
+    static void release(ModuleRelease module) {
         try {
-            System.out.println("🚀 Releasing module: " + module.module());
-            exec(true, GRADLEW.toAbsolutePath().toString(), ":%s:publishAndReleaseToMavenCentral".formatted(module.module()));
+            System.out.printf("🚀 Releasing: %s@%s%n", module.module(), module.version());
+            new GradlePublishCommand(module.module()).exec();
         } catch (Exception ex) {
-            System.err.println("❌ Failed to release module: " + module.module());
-            ex.printStackTrace();
+            LOGGER.error("❌ Failed to release module: " + module.module());
+            LOGGER.error(ex);
         }
     }
 
-    List<ModuleRelease> parseReleases(String commit) {
-        List<ModuleRelease> releases = new ArrayList<>();
+    static void parseArgs(String[] args) {
+        NavigableSet<String> argSet = new TreeSet<>(Arrays.asList(args));
+        if (args.length == 0 || argSet.contains("--help") || argSet.contains("-h")) {
+            printHelp();
+            System.exit(0);
+        }
+        if (argSet.contains("--dry-run")) DRY_RUN = true;
 
-        Pattern pt = Pattern.compile("\\d+(\\.\\d+)+");
-        String[] lines = commit.split("\n");
-        for (int i = 1; i < lines.length; i++) { // Skip header
-            String line = lines[i];
-            for (String module : modules) {
-                if (!line.contains(module.trim())) continue;
-                Matcher matcher = pt.matcher(line);
-                if (!matcher.find())
-                    throw new RuntimeException("Could not extract version for module: " + module);
-                String ver = matcher.group(0);
-                releases.add(new ModuleRelease(module.trim(), ver.trim()));
+        String logArg = argSet.ceiling("--log-level=");
+        if (logArg != null && logArg.startsWith("--log-level=")) {
+            String level = logArg.split("=", 2)[1];
+            LOG_LEVEL = LogLevel.valueOf(level.toUpperCase());
+        }
+    }
 
+    static void printHelp() {
+        String message = """
+            This script publishes modules to Maven Central.
+            Reads the latest commit (expected to be a release commit marked by :bookmark:),
+            parses the released modules and versions from the header, and runs the Gradle
+            publish task for each.
+
+            ** Arguments **
+              • --help, -h          : Prints this help message.
+              • --dry-run           : Prints the modules that would be released without publishing.
+              • --log-level=<level> : Sets log verbosity. Levels: TRACE, DEBUG, INFO, WARN, ERROR (default: WARN)
+            """;
+        System.out.println(message);
+    }
+
+    //================================================================================
+    // COMMANDS
+    //================================================================================
+
+    static class GitHeadCommitCommand extends Command<Commit> {
+        @Override
+        protected String[] args() {
+            return new String[]{"git", "log", "-1", "--pretty=format:%at%n%h%n%s"};
+        }
+
+        @Override
+        protected Commit parse(String output) {
+            String[] lines = output.trim().split("\n");
+            long timestamp = Long.parseLong(lines[0].trim());
+            String hash = lines[1].trim();
+            String header = lines[2].trim();
+            return new Commit(timestamp, hash, header);
+        }
+    }
+
+    static class GradlePublishCommand extends Command<Void> {
+        private final String module;
+
+        GradlePublishCommand(String module) {
+            this.module = module;
+        }
+
+        @Override
+        protected String[] args() {
+            return new String[]{
+                GRADLEW.toAbsolutePath().toString(),
+                ":%s:publishAndReleaseToMavenCentral".formatted(module)
+            };
+        }
+
+        @Override
+        protected Void parse(String output) {return null;}
+
+        @Override
+        public Void exec() throws CommandExecutionException {
+            // inheritIO streams gradle output directly to the console in real-time
+            try {
+                Process proc = new ProcessBuilder(args())
+                    .inheritIO()
+                    .start();
+                int exitCode = proc.waitFor();
+                if (exitCode != 0)
+                    throw new CommandExecutionException(
+                        new RuntimeException("Gradle publish failed (exit %d) for module: %s".formatted(exitCode, module))
+                    );
+                return null;
+            } catch (CommandExecutionException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new CommandExecutionException(ex);
             }
         }
-        return releases;
     }
 
-    //================================================================================
-    // Model
-    //================================================================================
+    static abstract class Command<T> {
+        protected abstract String[] args();
+        protected abstract T parse(String output);
 
-    enum OS {
-        Windows, Linux, MacOS, Other
-    }
+        /// For fire and forget commands with no output/parsing
+        public static void quickExec(String... args) {
+            new Command<Void>() {
+                @Override protected String[] args() {return args;}
+                @Override protected Void parse(String output) {return null;}
+            }.exec();
+        }
 
-    record ProcRet(
-        int state, String out
-    ) {}
+        public T exec() throws CommandExecutionException {
+            try {
+                LOGGER.trace("Executing command %s: %s".formatted(getClass().getSimpleName(), Arrays.toString(args())));
+                Process proc = new ProcessBuilder(args())
+                    .redirectErrorStream(true)
+                    .start();
 
-    record ModuleRelease(
-        String module,
-        String version
-    ) {}
+                CompletableFuture<String> outputFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return new String(proc.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                    } catch (Exception ex) {
+                        throw new CompletionException(ex);
+                    }
+                });
 
-    //================================================================================
-    // Utilities
-    //================================================================================
-    ProcRet exec(boolean print, String... command) throws Exception {
-        Process proc = new ProcessBuilder()
-            .command(command)
-            .redirectErrorStream(true)
-            .start();
-
-        // Consume the output stream in a separate thread
-        StringBuilder sb = new StringBuilder();
-        Thread outputThread = new Thread(() -> {
-            try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(proc.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (print) System.out.println(line);
-                    sb.append(line).append("\n");
+                int exitCode = proc.waitFor();
+                String output;
+                try {
+                    output = outputFuture.join();
+                } catch (CompletionException ex) {
+                    throw new CommandExecutionException(ex.getCause());
                 }
-            } catch (IOException e) {
-                System.err.println(e.getMessage());
-            }
-        });
-        outputThread.start();
 
-        int ret = proc.waitFor();
-        outputThread.join();
-        return new ProcRet(ret, sb.toString());
+                if (exitCode != 0) {
+                    throw new CommandExecutionException(
+                        new RuntimeException("Command failed (exit %d): %s".formatted(exitCode, output))
+                    );
+                }
+
+                return parse(output);
+            } catch (CommandExecutionException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new CommandExecutionException(ex);
+            }
+        }
     }
+
+    static class CommandExecutionException extends RuntimeException {
+        public CommandExecutionException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    //================================================================================
+    // MODEL
+    //================================================================================
+
+    record Commit(long timestamp, String hash, String header) {}
+
+    record ModuleRelease(String module, String version) {
+        public static List<ModuleRelease> parseAll(Commit releaseCommit) {
+            List<ModuleRelease> releases = new ArrayList<>();
+            String header = releaseCommit.header().replace(":bookmark:", "").trim();
+            for (String token : header.split(",")) {
+                String[] parts = token.trim().split("@");
+                if (parts.length == 2) {
+                    releases.add(new ModuleRelease(parts[0].trim(), parts[1].trim()));
+                    continue;
+                }
+                LOGGER.error("Invalid release token: " + token);
+            }
+            return releases;
+        }
+    }
+
+    //================================================================================
+    // UTILS
+    //================================================================================
+
+    enum OS {Windows, Linux, MacOS, Other}
 
     static OS os() {
         String name = System.getProperty("os.name");
         return switch (name) {
-            case String s when s.contains("win") || s.contains("Win") -> OS.Windows;
+            case String s when s.toLowerCase().contains("win") -> OS.Windows;
             case String s when s.contains("nix") || s.contains("nux") -> OS.Linux;
-            case String s when s.contains("mac") || s.contains("Mac") -> OS.MacOS;
+            case String s when s.toLowerCase().contains("mac") -> OS.MacOS;
             default -> OS.Other;
         };
+    }
+
+    static class Logger {
+        public void trace(String message) {LogLevel.TRACE.print(message);}
+        public void debug(String message) {LogLevel.DEBUG.print(message);}
+        public void info(String message) {LogLevel.INFO.print(message);}
+        public void warn(String message) {LogLevel.WARN.print(message);}
+        public void error(String message) {LogLevel.ERROR.print(message);}
+        public void error(Throwable t) {
+            StringWriter sw = new StringWriter();
+            t.printStackTrace(new PrintWriter(sw, true));
+            error(sw.toString());
+        }
+    }
+
+    enum LogLevel {
+        TRACE, DEBUG, INFO,
+        WARN(System.err),
+        ERROR(System.err);
+
+        final PrintStream stream;
+        LogLevel() {this.stream = System.out;}
+        LogLevel(PrintStream stream) {this.stream = stream;}
+
+        void print(String message) {
+            if (LOG_LEVEL != null && this.ordinal() >= LOG_LEVEL.ordinal())
+                stream.printf("%tT - [%s]: %s%n", System.currentTimeMillis(), name(), message);
+        }
     }
 }
