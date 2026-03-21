@@ -25,7 +25,7 @@ import static net.bytebuddy.matcher.ElementMatchers.isConstructor;
 /// Thanks to [ByteBuddy](https://bytebuddy.net/), we can transform the bytecode of classes annotated with [HotSwappable]
 /// to automatically register on the [HotSwapService]'s registry when a constructor is used. In other words, every new
 /// instance is automatically registered for hot swapping.
-/// 
+///
 /// The agent starts a [HotSwapServer] that listens for reload requests. This process is about redefining all changed
 /// classes through the [Instrumentation#redefineClasses(ClassDefinition...)] and asking the service to swap the changed nodes.
 public class HotSwapAgent {

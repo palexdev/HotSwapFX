@@ -10,6 +10,7 @@ import javafx.scene.Node;
 import static java.util.Optional.ofNullable;
 
 // TODO limit the user of strings in favor of Class<?>
+
 /// Registry that keeps track of all the nodes objects which type is marked by [HotSwappable], as well as their dependencies.
 ///
 /// Uses [WeakReferences][WeakReference] and a [ReferenceQueue] to avoid memory leaks.
@@ -97,6 +98,7 @@ class HotSwapRegistry {
 
     static class TrackedRef extends WeakReference<Node> {
         final Class<?> theClass;
+
         TrackedRef(Node node, ReferenceQueue<Node> queue) {
             super(node, queue);
             this.theClass = node.getClass();

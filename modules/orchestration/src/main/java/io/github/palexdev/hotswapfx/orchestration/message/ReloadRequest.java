@@ -20,6 +20,7 @@ public record ReloadRequest(Changes changes) implements Message {
 
     public static class Changes extends HashMap<Path, ChangeType> {
         public Changes() {}
+
         public Changes(Map<? extends Path, ? extends ChangeType> m) {super(m);}
     }
 }
