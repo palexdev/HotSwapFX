@@ -9,7 +9,10 @@ include 'core'
 include 'gradle-plugin'
 include 'orchestration'
 include 'runtime'
-include 'showcase'
+
+if (!hasProperty('skipShowcase')) {
+    include 'showcase'
+}
 
 rootProject.name = 'HotSwapFX'
 rootProject.children.each { project ->
