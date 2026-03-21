@@ -10,6 +10,7 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@main
         with:
+          submodules: 'recursive'
           fetch-depth: 0
 
       - name: Setup JDK
@@ -18,8 +19,8 @@ jobs:
           distribution: jetbrains
           java-version: 25
 
-      - name: Give permissions to script
-        run: chmod +x scripts/UpdateChangelogs
+      - name: Install JBang
+        run: curl -Ls https://sh.jbang.dev | bash -s - app setup
 
       - name: Run script
-        run: java --source 25 ./scripts/UpdateChangelogs
+        run: jbang run ./scripts/binaries/UpdateChangelogs.jar
