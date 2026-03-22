@@ -24,6 +24,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /// Annotation to mark a certain type as part of the hot swap mechanism.
+///
+/// _**Note:** Removing this annotation at runtime is not supported! The `ByteBuddy` agent depends on this to check which
+/// classes need to be reloaded/transformed/registered!_
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface HotSwappable {
