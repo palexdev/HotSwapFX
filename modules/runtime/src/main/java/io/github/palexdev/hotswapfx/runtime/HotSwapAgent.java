@@ -52,8 +52,6 @@ import static net.bytebuddy.matcher.ElementMatchers.isConstructor;
 /// classes through the [Instrumentation#redefineClasses(ClassDefinition...)] and asking the service to swap the changed nodes.
 public class HotSwapAgent {
 
-    // TODO store last changes, avoid first reload?
-
     public static void agentmain(String args, Instrumentation inst) {
         premain(args, inst);
     }
@@ -66,12 +64,13 @@ public class HotSwapAgent {
 
     private final Map<String, String> args;
     private final Instrumentation inst;
-    protected final HotSwapServer server;
+    protected HotSwapServer server;
 
     public HotSwapAgent(String args, Instrumentation inst) {
         this.args = parseArgs(args);
         this.inst = inst;
-        this.server = new HotSwapServer(port());
+        if (!useLegacyWatchService())
+            this.server = new HotSwapServer(port());
     }
 
     public void install() {
@@ -85,8 +84,14 @@ public class HotSwapAgent {
     }
 
     public void run() {
-        server.registerHook(ReloadRequest.class, this::handleReload);
-        server.startAsync();
+        if (useLegacyWatchService()) {
+            LegacyWatchService.instance().onReloadRequest(this::handleReload);
+            LegacyWatchService.instance().start();
+        } else {
+            server.registerHook(ReloadRequest.class, this::handleReload);
+            server.startAsync();
+        }
+
     }
 
     protected void handleReload(ReloadRequest request) {
@@ -145,6 +150,12 @@ public class HotSwapAgent {
         return ofNullable(args.get("port"))
             .map(Integer::valueOf)
             .orElseThrow(() -> new RuntimeException("Port not specified"));
+    }
+
+    private boolean useLegacyWatchService() {
+        return ofNullable(args.get("legacyWatchService"))
+            .map(Boolean::valueOf)
+            .orElse(false);
     }
 
     private Map<String, String> parseArgs(String allArgs) {

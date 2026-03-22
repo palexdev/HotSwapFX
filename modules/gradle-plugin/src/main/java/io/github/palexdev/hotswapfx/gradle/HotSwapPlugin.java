@@ -158,9 +158,10 @@ public class HotSwapPlugin implements Plugin<Project> {
             // Configure run task
             t.doFirst(_ ->
                 project.getTasks().named("run", JavaExec.class).configure(rt -> {
-                    rt.jvmArgs("-javaagent:%s=port=%d".formatted(
+                    rt.jvmArgs("-javaagent:%s=port=%d,legacyWatchService=%s".formatted(
                         context.settings.agentPath(),
-                        context.settings.agentPort()
+                        context.settings.agentPort(),
+                        context().settings.legacyWatchService
                     ), "-XX:+AllowEnhancedClassRedefinition");
                     rt.doLast(_ -> context.dispose());
                 })
@@ -185,6 +186,7 @@ public class HotSwapPlugin implements Plugin<Project> {
         private final Project project;
         String agentPath = null;
         int agentPort = -1;
+        boolean legacyWatchService = false;
         boolean verbose = false;
 
         public Settings(Project project) {

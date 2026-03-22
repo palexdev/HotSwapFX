@@ -41,6 +41,7 @@ abstract class WatchServiceTask extends DefaultTask {
     @SuppressWarnings("resource")
     @TaskAction
     void start() {
+        if (HotSwapPlugin.settings().legacyWatchService) return;
         Utils.LOGGER.lifecycle("Starting watch service...");
         var conn = HotSwapPlugin.context().hotReloadConnection();
         Thread.ofVirtual().name("HotReload Watcher Service").start(() -> {
