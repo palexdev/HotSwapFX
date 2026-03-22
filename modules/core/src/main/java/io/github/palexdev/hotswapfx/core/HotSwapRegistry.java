@@ -20,14 +20,13 @@ package io.github.palexdev.hotswapfx.core;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.nio.file.Path;
 import java.util.*;
 
 import io.github.palexdev.hotswapfx.core.annotations.HotSwappable;
 import javafx.scene.Node;
 
 import static java.util.Optional.ofNullable;
-
-// TODO limit the user of strings in favor of Class<?>
 
 /// Registry that keeps track of all the nodes objects which type is marked by [HotSwappable], as well as their dependencies.
 ///
@@ -42,6 +41,7 @@ class HotSwapRegistry {
     private final ReferenceQueue<Node> refQueue = new ReferenceQueue<>();
 
     private final Map<Class<?>, Set<Class<?>>> deps = new HashMap<>();
+    private final Map<Class<?>, ServiceHook<?>> resHooks = new HashMap<>();
 
     //================================================================================
     // Methods
@@ -58,6 +58,7 @@ class HotSwapRegistry {
         registry.computeIfAbsent(klass, _ -> new HashSet<>())
             .add(new TrackedRef(node, refQueue));
 
+        // Register dependencies
         HotSwappable annotation = klass.getAnnotation(HotSwappable.class);
         ofNullable(annotation).map(HotSwappable::dependencies)
             .filter(deps -> deps.length != 0)
@@ -65,6 +66,24 @@ class HotSwapRegistry {
                 deps -> this.deps.put(klass, Set.of(deps)),
                 () -> deps.remove(klass)
             );
+
+        // Resources hook
+        ServiceHook<Path> resHook = ofNullable(annotation).map(HotSwappable::resources)
+            .filter(res -> !res.isBlank())
+            .map(Utils::toPathMatcher)
+            .map(matcher -> (ServiceHook<Path>) p -> {
+                if (matcher.matches(p.getFileName()))
+                    HotSwapService.instance().swapNodes(klass);
+            })
+            .orElse(null);
+        if (resHooks.containsKey(klass)) { // unregister previous hook
+            HotSwapService.instance().removeHook(resHooks.get(klass));
+        }
+        if (resHook != null) { // register new hook
+            HotSwapService.instance().earlyHook(resHook);
+            resHooks.put(klass, resHook);
+        }
+
     }
 
     /// @return all the dependencies of the given class

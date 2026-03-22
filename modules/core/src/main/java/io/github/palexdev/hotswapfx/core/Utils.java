@@ -19,6 +19,9 @@
 package io.github.palexdev.hotswapfx.core;
 
 import java.lang.reflect.Constructor;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
 import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Platform;
@@ -64,5 +67,16 @@ public class Utils {
             }
         });
         future.join();
+    }
+
+    /// @return a new [PathMatcher] object that matches against the given expression.
+    /// If the expression is not prefixed by either `glob:` or `regex:`, the expression is considered to be a glob pattern.
+    ///
+    /// @see FileSystem#getPathMatcher(String)
+    public static PathMatcher toPathMatcher(String expr) {
+        if (!expr.startsWith("glob:") && !expr.startsWith("regex:")) {
+            expr = "glob:" + expr;
+        }
+        return FileSystems.getDefault().getPathMatcher(expr);
     }
 }

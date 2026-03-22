@@ -23,6 +23,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.github.palexdev.hotswapfx.core.Utils;
+
 /// Annotation to mark a certain type as part of the hot swap mechanism.
 ///
 /// _**Note:** Removing this annotation at runtime is not supported! The `ByteBuddy` agent depends on this to check which
@@ -33,4 +35,9 @@ public @interface HotSwappable {
 
     /// When any of the dependencies specified by this change, the marked type is also reloaded by the service.
     Class<?>[] dependencies() default {};
+
+    /// Allows specifying an expression to match changed resources on the classpath and reload the marked type.
+    ///
+    /// @see Utils#toPathMatcher(String)
+    String resources() default "";
 }
