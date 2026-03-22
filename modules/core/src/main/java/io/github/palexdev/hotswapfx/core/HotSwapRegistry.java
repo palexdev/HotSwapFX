@@ -39,8 +39,9 @@ class HotSwapRegistry {
     //================================================================================
 
     private final Map<Class<?>, Set<TrackedRef>> registry = new HashMap<>();
-    private final Map<Class<?>, Set<Class<?>>> reverseDeps = new HashMap<>();
     private final ReferenceQueue<Node> refQueue = new ReferenceQueue<>();
+
+    private final Map<Class<?>, Set<Class<?>>> deps = new HashMap<>();
 
     //================================================================================
     // Methods
@@ -56,30 +57,28 @@ class HotSwapRegistry {
         Class<? extends Node> klass = node.getClass();
         registry.computeIfAbsent(klass, _ -> new HashSet<>())
             .add(new TrackedRef(node, refQueue));
-        ofNullable(klass.getAnnotation(HotSwappable.class))
-            .map(HotSwappable::dependencies)
-            .ifPresent(deps -> {
-                for (Class<?> dep : deps) {
-                    reverseDeps.computeIfAbsent(dep, _ -> new HashSet<>())
-                        .add(klass);
-                }
-            });
+
+        HotSwappable annotation = klass.getAnnotation(HotSwappable.class);
+        ofNullable(annotation).map(HotSwappable::dependencies)
+            .filter(deps -> deps.length != 0)
+            .ifPresentOrElse(
+                deps -> this.deps.put(klass, Set.of(deps)),
+                () -> deps.remove(klass)
+            );
     }
 
-    /// @return all the registered dependencies for the given class
+    /// @return all the dependencies of the given class
     public Set<Class<?>> dependenciesOf(Class<?> klass) {
-        Set<Class<?>> deps = new LinkedHashSet<>();
-        collectOwners(klass, deps);
-        return deps;
+        return deps.getOrDefault(klass, Collections.emptySet());
     }
 
-    private void collectOwners(Class<?> klass, Set<Class<?>> visited) {
-        Set<Class<?>> owners = reverseDeps.getOrDefault(klass, Collections.emptySet());
-        for (Class<?> owner : owners) {
-            if (visited.add(owner)) {
-                collectOwners(owner, visited);
-            }
-        }
+    /// @return all the classes which depend on the given one
+    public Set<Class<?>> dependsOn(Class<?> klass) {
+        Set<Class<?>> deps = new HashSet<>();
+        this.deps.forEach((k, v) -> {
+            if (v.contains(klass)) deps.add(k);
+        });
+        return deps;
     }
 
     /// Removes the given node from the tracked references.

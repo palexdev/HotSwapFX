@@ -127,7 +127,7 @@ public class HotSwapAgent {
         Set<Class<?>> reloaded = new LinkedHashSet<>();
         for (ClassDefinition cd : toRedefine) {
             reloaded.add(cd.getDefinitionClass());
-            reloaded.addAll(HotSwapService.instance().dependenciesOf(cd.getDefinitionClass()));
+            reloaded.addAll(HotSwapService.instance().dependsOn(cd.getDefinitionClass()));
         }
 
         // Phase 2 - Swap

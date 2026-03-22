@@ -102,12 +102,19 @@ public class HotSwapService {
         }
     }
 
+    /// Delegate of [HotSwapRegistry#register(Node)]
     public void register(Node node) {
         registry.register(node);
     }
 
+    /// Delegate of [HotSwapRegistry#dependenciesOf(Class)]
     public Set<Class<?>> dependenciesOf(Class<?> klass) {
         return registry.dependenciesOf(klass);
+    }
+
+    /// Delegate of [HotSwapRegistry#dependsOn(Class)]
+    public Set<Class<?>> dependsOn(Class<?> klass) {
+        return registry.dependsOn(klass);
     }
 
     @SuppressWarnings("unchecked")
