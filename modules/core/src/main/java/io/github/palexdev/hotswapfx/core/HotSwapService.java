@@ -18,12 +18,16 @@
 
 package io.github.palexdev.hotswapfx.core;
 
-import java.util.List;
-import java.util.Set;
+import java.nio.file.Path;
+import java.util.*;
 
+import io.github.palexdev.hotswapfx.core.ServiceHook.HookType;
+import io.github.palexdev.hotswapfx.core.ServiceHook.Hooks;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import org.tinylog.Logger;
+
+import static java.util.Optional.*;
 
 /// Core class that represents the hotswap service. Responsible for instantiating new nodes and swapping them in
 /// the scenegraph.
@@ -46,6 +50,7 @@ public class HotSwapService {
     //================================================================================
 
     private final HotSwapRegistry registry = new HotSwapRegistry();
+    private final Map<HookType, Hooks> hooksMap = new EnumMap<>(HookType.class);
 
     //================================================================================
     // Constructors
@@ -58,6 +63,8 @@ public class HotSwapService {
     //================================================================================
 
     public void swapNodes(Class<?> klass) {
+        notifyLateHooks(klass);
+
         if (!Node.class.isAssignableFrom(klass)) {
             Logger.trace("Class {} is not a Node, skipping...", klass.getName());
             return;
@@ -103,5 +110,29 @@ public class HotSwapService {
         return registry.dependenciesOf(klass);
     }
 
-    // TODO add hook mechanisms
+    @SuppressWarnings("unchecked")
+    private void notifyLateHooks(Class<?> klass) {
+        ofNullable(hooksMap.get(HookType.ON_CLASS))
+            .ifPresent(hooks -> hooks.forEach(h -> ((ServiceHook<Class<?>>) h).onEvent(klass)));
+    }
+
+    public HotSwapService earlyHook(ServiceHook<Path> hook) {
+        hooksMap.computeIfAbsent(HookType.ON_FILE, _ -> new Hooks()).add(hook);
+        return this;
+    }
+
+    public HotSwapService lateHook(ServiceHook<Class<?>> hook) {
+        hooksMap.computeIfAbsent(HookType.ON_CLASS, _ -> new Hooks()).add(hook);
+        return this;
+    }
+
+    public HotSwapService removeHook(ServiceHook<?> hook) {
+        hooksMap.values().forEach(hooks -> hooks.remove(hook));
+        hook.dispose();
+        return this;
+    }
+
+    public Map<HookType, Hooks> hooks() {
+        return Collections.unmodifiableMap(hooksMap);
+    }
 }

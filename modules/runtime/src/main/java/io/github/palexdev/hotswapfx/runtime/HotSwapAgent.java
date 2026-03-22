@@ -21,10 +21,13 @@ package io.github.palexdev.hotswapfx.runtime;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 import io.github.palexdev.hotswapfx.core.HotSwapException;
 import io.github.palexdev.hotswapfx.core.HotSwapService;
+import io.github.palexdev.hotswapfx.core.ServiceHook;
+import io.github.palexdev.hotswapfx.core.ServiceHook.HookType;
 import io.github.palexdev.hotswapfx.core.annotations.HotSwappable;
 import io.github.palexdev.hotswapfx.orchestration.HotSwapServer;
 import io.github.palexdev.hotswapfx.orchestration.message.ReloadRequest;
@@ -35,6 +38,7 @@ import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.pool.TypePool;
 import org.tinylog.Logger;
 
+import static java.util.Optional.ofNullable;
 import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
 import static net.bytebuddy.matcher.ElementMatchers.isConstructor;
 
@@ -86,10 +90,16 @@ public class HotSwapAgent {
     }
 
     protected void handleReload(ReloadRequest request) {
+        // Notify early hooks
+        request.changes().keySet().forEach(this::notifyEarlyHooks);
+
         // Phase 1 - Redefine
-        Logger.info("Reloading classes: {}", request.changes());
+        Logger.info("Reloading on: {}", request.changes());
         ClassDefinition[] toRedefine = request.changes().keySet().stream()
-            .filter(p -> !"module-info.class".equals(p.getFileName().toString()))
+            .filter(p -> {
+                String fileName = p.getFileName().toString();
+                return fileName.endsWith(".class") && !"module-info.class".equals(fileName);
+            })
             .map(p -> {
                 try {
                     byte[] classBytes = Files.readAllBytes(p);
@@ -125,8 +135,14 @@ public class HotSwapAgent {
         reloaded.forEach(HotSwapService.instance()::swapNodes);
     }
 
+    @SuppressWarnings("unchecked")
+    private void notifyEarlyHooks(Path path) {
+        ofNullable(HotSwapService.instance().hooks().get(HookType.ON_FILE))
+            .ifPresent(hooks -> hooks.forEach(h -> ((ServiceHook<Path>) h).onEvent(path)));
+    }
+
     private int port() {
-        return Optional.ofNullable(args.get("port"))
+        return ofNullable(args.get("port"))
             .map(Integer::valueOf)
             .orElseThrow(() -> new RuntimeException("Port not specified"));
     }
