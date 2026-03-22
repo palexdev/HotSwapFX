@@ -9,7 +9,7 @@ repositories {
 }
 
 dependencies {
-    implementation "io.github.palexdev:hotswapfx-core:25+"
+    implementation(project(':core'))
     implementation "io.github.palexdev:hotswapfx-runtime:25+"
     implementation "io.github.palexdev:mfxcomponents:25+"
     implementation "io.github.palexdev:imcache:21+"
@@ -27,3 +27,7 @@ javafx {
     modules = ['javafx.controls', 'javafx.fxml']
     configurations = ['implementation']
 }
+
+//hotSwapFx {
+//    legacyWatchService = true
+//}

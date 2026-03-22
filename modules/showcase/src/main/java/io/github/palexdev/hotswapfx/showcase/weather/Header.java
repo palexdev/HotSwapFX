@@ -33,7 +33,6 @@ import io.github.palexdev.mfxcore.observables.When;
 import io.github.palexdev.mfxcore.utils.fx.StageUtils;
 import io.github.palexdev.mfxcore.utils.fx.SwingFXUtils;
 import io.github.palexdev.mfxresources.icon.MFXFontIcon;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;

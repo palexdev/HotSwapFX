@@ -18,8 +18,9 @@
 
 package io.github.palexdev.hotswapfx.showcase.weather;
 
-import io.github.palexdev.hotswapfx.core.HotSwapStrategy;
+import io.github.palexdev.hotswapfx.core.annotations.Factory;
 import io.github.palexdev.hotswapfx.core.annotations.HotSwappable;
+import io.github.palexdev.hotswapfx.core.annotations.SwapStrategy;
 import io.github.palexdev.virtualizedfx.controls.VFXScrollPane;
 import io.github.palexdev.virtualizedfx.list.VFXList;
 import io.github.palexdev.virtualizedfx.utils.ScrollParams;
@@ -30,8 +31,11 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-@HotSwappable(dependencies = {Header.class, ForecastCard.class, DetailsPane.class})
-public class WeatherView extends VBox implements HotSwapStrategy {
+@HotSwappable(
+    dependencies = {Header.class, ForecastCard.class, DetailsPane.class},
+    resources = "*.{css}"
+)
+public class WeatherView extends VBox {
 
     public WeatherView(Stage stage) {
         Header header = new Header(stage);
@@ -55,8 +59,13 @@ public class WeatherView extends VBox implements HotSwapStrategy {
         getStylesheets().add(WeatherApp.class.getResource("WeatherApp.css").toString());
     }
 
-    @Override
-    public Node newInstance() {
+    @Factory
+    private Node newInstance() {
         return new WeatherView(((Stage) getScene().getWindow()));
+    }
+
+    @SwapStrategy
+    private void swap(WeatherView newNode) {
+        getScene().setRoot(newNode);
     }
 }
