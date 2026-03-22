@@ -24,7 +24,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import io.github.palexdev.hotswapfx.core.Utils;
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -76,7 +75,7 @@ public @interface SwapStrategy {
                 scene.getRoot() == oldNode
             ) {
                 Utils.waitForFX(() -> {
-                    Platform.runLater(() -> scene.setRoot(((Parent) newNode)));
+                    scene.setRoot(((Parent) newNode));
                     Logger.debug("Node {} replaced in Scene", oldNode);
                 });
                 return true;
