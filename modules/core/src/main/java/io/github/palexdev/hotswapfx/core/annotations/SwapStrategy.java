@@ -72,6 +72,7 @@ public @interface SwapStrategy {
 
         static boolean swapInScene(Node oldNode, Node newNode, Scene scene) {
             if (oldNode != null &&
+                scene != null &&
                 scene.getRoot() == oldNode
             ) {
                 Utils.waitForFX(() -> {
