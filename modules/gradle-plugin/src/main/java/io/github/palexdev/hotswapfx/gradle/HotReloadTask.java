@@ -29,7 +29,6 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.*;
-import org.gradle.internal.FileUtils;
 import org.gradle.work.DisableCachingByDefault;
 import org.gradle.work.Incremental;
 import org.gradle.work.InputChanges;
@@ -67,7 +66,6 @@ abstract class HotReloadTask extends DefaultTask {
     void takeSnapshot(InputChanges changes) {
         ReloadRequest.Changes requestChanges = new ReloadRequest.Changes();
         changes.getFileChanges(getClasspath()).forEach(change -> {
-            if (!FileUtils.hasExtension(change.getFile(), ".class")) return;
             ReloadRequest.ChangeType type = switch (change.getChangeType()) {
                 case ADDED -> ReloadRequest.ChangeType.ADD;
                 case MODIFIED -> ReloadRequest.ChangeType.UPDATE;

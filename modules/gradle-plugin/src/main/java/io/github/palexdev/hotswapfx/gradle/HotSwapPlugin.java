@@ -27,6 +27,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.compile.AbstractCompile;
 import org.gradle.api.tasks.compile.JavaCompile;
@@ -138,12 +139,14 @@ public class HotSwapPlugin implements Plugin<Project> {
             t.setDescription("Takes a snapshot of the classpath and communicated changes to the hot swap agent");
             t.getClasspath().from(
                 project.getTasks().named("compileJava", JavaCompile.class)
-                    .flatMap(AbstractCompile::getDestinationDirectory)
+                    .flatMap(AbstractCompile::getDestinationDirectory),
+                project.getTasks().named("processResources", Copy.class)
+                    .map(Copy::getDestinationDir)
             );
             t.getTimestampFile().set(
                 project.getLayout().getProjectDirectory().file(".hotswapfx")
             );
-            t.dependsOn("compileJava");
+            t.dependsOn("compileJava", "processResources");
         });
 
         // Hot run task
