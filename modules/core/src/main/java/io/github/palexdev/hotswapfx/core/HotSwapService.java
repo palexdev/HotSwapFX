@@ -18,21 +18,24 @@
 
 package io.github.palexdev.hotswapfx.core;
 
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.*;
 
 import io.github.palexdev.hotswapfx.core.ServiceHook.HookType;
 import io.github.palexdev.hotswapfx.core.ServiceHook.Hooks;
+import io.github.palexdev.hotswapfx.core.annotations.Factory;
+import io.github.palexdev.hotswapfx.core.annotations.SwapStrategy;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import org.tinylog.Logger;
 
-import static java.util.Optional.*;
+import static java.util.Optional.ofNullable;
 
 /// Core class that represents the hotswap service. Responsible for instantiating new nodes and swapping them in
 /// the scenegraph.
 ///
-/// @see HotSwapStrategy
+/// @see SwapStrategy
+/// @see Factory
 public class HotSwapService {
 
     //================================================================================
@@ -75,22 +78,23 @@ public class HotSwapService {
         Logger.trace("Found {} instances", instances.size());
         for (Node node : instances) {
             try {
-                Parent parent = node.getParent();
                 Node newNode = Utils.newInstanceOf(node);
                 Logger.debug("Instantiated new node: {}, replacing...", newNode);
 
                 // Try 1: use strategy if available
-                if (node instanceof HotSwapStrategy strategy && strategy.swapInScenegraph(newNode, parent)) {
+                Method strategy = Arrays.stream(klass.getDeclaredMethods())
+                    .filter(m -> m.isAnnotationPresent(SwapStrategy.class))
+                    .findFirst()
+                    .orElse(null);
+                if (strategy != null) {
+                    strategy.setAccessible(true);
+                    strategy.invoke(node, newNode);
                     registry.unregister(node);
                     continue;
                 }
-                // Try 2: replacing in the parent container...
-                if (HotSwapStrategy.swapInParent(node, newNode, parent)) {
-                    registry.unregister(node);
-                    continue;
-                }
-                // Try 3: maybe it's the root of some Scene...
-                if (HotSwapStrategy.swapInScene(node, newNode, node.getScene())) {
+
+                // Try 2: try default strategy
+                if (SwapStrategy.Default.swapInScenegraph(node, newNode)) {
                     registry.unregister(node);
                     continue;
                 }

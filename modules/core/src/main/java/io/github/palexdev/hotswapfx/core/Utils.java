@@ -19,11 +19,14 @@
 package io.github.palexdev.hotswapfx.core;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
+import io.github.palexdev.hotswapfx.core.annotations.Factory;
 import javafx.application.Platform;
 import javafx.scene.Node;
 
@@ -39,14 +42,20 @@ public class Utils {
     // Static Methods
     //================================================================================
 
-    /// Creates a new instace of the given node type by either:
-    /// - Calling [HotSwapStrategy#newInstance()] if it implements the interface
-    /// - Using reflection to invoke the no-arg constructor
+    /// Creates a new instance of the given node type by either:
+    /// - Retrieving and invoking the first method annotated with [Factory] on the given node's class
+    /// - Invoking the no-args constructor
     public static Node newInstanceOf(Node node) throws ReflectiveOperationException {
-        if (node instanceof HotSwapStrategy c) {
-            return c.newInstance();
-        }
         Class<? extends Node> klass = node.getClass();
+        Method factory = Arrays.stream(klass.getDeclaredMethods())
+            .filter(m -> m.isAnnotationPresent(Factory.class))
+            .findFirst()
+            .orElse(null);
+        if (factory != null) {
+            factory.setAccessible(true);
+            return (Node) factory.invoke(node);
+        }
+
         Constructor<? extends Node> noArg = klass.getConstructor();
         return noArg.newInstance();
     }
