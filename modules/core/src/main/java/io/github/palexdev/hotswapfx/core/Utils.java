@@ -25,6 +25,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import io.github.palexdev.hotswapfx.core.annotations.Factory;
 import javafx.application.Platform;
@@ -62,20 +63,27 @@ public class Utils {
 
     /// Runs the given runnable on the FX thread and blocks the calling thread until it finishes.
     public static void waitForFX(Runnable runnable) {
-        if (Platform.isFxApplicationThread()) {
+        waitForFx((Supplier<Void>) () -> {
             runnable.run();
+            return null;
+        });
+    }
+
+    /// Runs the given supplier on the FX thread and blocks the calling thread until it finishes.
+    public static <T> T waitForFx(Supplier<T> supplier) {
+        if (Platform.isFxApplicationThread()) {
+            supplier.get();
         }
 
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<T> future = new CompletableFuture<>();
         Platform.runLater(() -> {
             try {
-                runnable.run();
-                future.complete(null);
+                future.complete(supplier.get());
             } catch (Throwable ex) {
                 future.completeExceptionally(ex);
             }
         });
-        future.join();
+        return future.join();
     }
 
     /// @return a new [PathMatcher] object that matches against the given expression.

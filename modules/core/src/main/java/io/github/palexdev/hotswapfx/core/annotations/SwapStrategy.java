@@ -60,12 +60,13 @@ public @interface SwapStrategy {
         static boolean swapInParent(Node oldNode, Node newNode, Node parent) {
             if (oldNode != null && parent instanceof Pane pane) {
                 ObservableList<Node> children = pane.getChildren();
-                Utils.waitForFX(() -> {
+                return Utils.waitForFx(() -> {
                     int idx = children.indexOf(oldNode);
-                    if (idx >= 0) children.set(idx, newNode);
+                    if (idx < 0) return false;
+                    children.set(idx, newNode);
                     Logger.debug("Node {} replaced in parent container", oldNode);
+                    return true;
                 });
-                return true;
             }
             return false;
         }
