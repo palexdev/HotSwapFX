@@ -7,8 +7,8 @@ version = "$devtools"
 
 dependencies {
     api(project(":orchestration"))
-    implementation "io.github.palexdev:mfxcore:latest.release"
-    implementation 'io.github.palexdev:mfxcomponents:latest.release'
+    implementation "io.github.palexdev:mfxcore:$mfxcore"
+    implementation "io.github.palexdev:mfxcomponents:$mfxcomponents"
     implementation "org.tinylog:tinylog-api:$tinylog"
     implementation "org.tinylog:tinylog-impl:$tinylog"
 }

@@ -12,10 +12,10 @@ dependencies {
     implementation(project(':core'))
     implementation(project(':devtools'))
     implementation "io.github.palexdev:hotswapfx-runtime:latest.release"
-    implementation "io.github.palexdev:mfxcore:latest.release"
-    implementation 'io.github.palexdev:mfxcomponents:latest.release'
-    implementation "io.github.palexdev:imcache:latest.release"
-    implementation "one.jpro.platform.jpms:cssfx:latest.release"
+    implementation "io.github.palexdev:mfxcore:$mfxcore"
+    implementation "io.github.palexdev:mfxcomponents:$mfxcomponents"
+    implementation "io.github.palexdev:imcache:$imcache"
+    implementation "one.jpro.platform.jpms:cssfx:$cssfx"
     implementation "org.tinylog:tinylog-api:$tinylog"
     implementation "org.tinylog:tinylog-impl:$tinylog"
 }
