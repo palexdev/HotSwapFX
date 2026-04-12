@@ -11,7 +11,7 @@ include 'gradle-plugin'
 include 'orchestration'
 include 'runtime'
 
-if (!hasProperty('skipShowcase')) {
+if (!Boolean.parseBoolean(System.getenv('SKIP_SHOWCASE'))) {
     include 'showcase'
 }
 
