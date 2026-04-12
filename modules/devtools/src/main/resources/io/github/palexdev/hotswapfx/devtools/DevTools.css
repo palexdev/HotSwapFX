@@ -1,0 +1,72 @@
+.devtools-view {
+  -fx-background-color: -md-sys-color-surface;
+  -fx-background-insets: 1px;
+  -fx-background-radius: 12px;
+  -fx-border-color: -md-sys-color-primary-container;
+  -fx-border-radius: 12px;
+  -fx-padding: 6px;
+}
+
+.devtools-view > .content {
+  -fx-alignment: CENTER;
+  -fx-spacing: 8px;
+}
+
+/* Popups */
+
+.mfx-tooltip {
+  -fx-background-color: -md-sys-color-surface;
+  -fx-background-insets: 1px;
+  -fx-background-radius: 4px;
+  -fx-border-color: -md-sys-color-outline-variant;
+  -fx-border-radius: 4px;
+  -fx-padding: 4px 8px;
+}
+
+.mfx-tooltip .label {
+  -fx-font-family: 'MontSerrat SemiBold';
+  -fx-font-size: 13px;
+  -fx-text-fill: -md-sys-color-on-surface;
+}
+
+.mfx-menu {
+  -fx-background-color: -md-sys-color-surface;
+  -fx-background-insets: 1px;
+  -fx-background-radius: 4px !important;
+  -fx-border-color: -md-sys-color-outline-variant;
+  -fx-border-radius: 4px !important;
+  -fx-padding: 4px;
+}
+
+.mfx-menu .menu-content {
+  -mfx-spacing: 2px;
+}
+
+.mfx-menu .mfx-menu-item {
+  -fx-background-radius: 2px;
+  -fx-font-family: 'MontSerrat SemiBold';
+  -fx-font-size: 13px;
+  -fx-text-fill: -md-sys-color-on-surface;
+  -fx-padding: 2px 6px;
+}
+
+.mfx-menu .mfx-menu-item.sub .svg-icon {
+  -fx-background-color: -md-sys-color-on-surface;
+}
+
+.mfx-menu .mfx-menu-item:hover,
+.mfx-menu .mfx-menu-item:focus-visible {
+  -fx-background-color: -md-sys-color-surface-container-high;
+}
+
+.mfx-menu .mfx-menu-item:focused {
+  -fx-background-color: -md-sys-color-surface-container-highest;
+}
+
+.mfx-menu .mfx-menu-item:selected {
+  -fx-background-color: -md-sys-color-secondary-container;
+}
+
+.mfx-menu .mfx-menu-item.check .mark {
+  -fx-background-color: -md-sys-color-on-surface;
+}

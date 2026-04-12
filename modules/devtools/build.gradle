@@ -1,0 +1,31 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
+}
+
+version = "$devtools"
+
+dependencies {
+    api(project(":orchestration"))
+    implementation "io.github.palexdev:mfxcore:latest.release"
+    implementation 'io.github.palexdev:mfxcomponents:latest.release'
+    implementation "org.tinylog:tinylog-api:$tinylog"
+    implementation "org.tinylog:tinylog-impl:$tinylog"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-devtools") }
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.controls', 'javafx.fxml']
+    configurations = ['compileOnly']
+}
+
+application {
+    mainClass = 'io.github.palexdev.hotswapfx.devtools.DevTools'
+    mainModule = 'HotSwapFX.DevTools'
+}

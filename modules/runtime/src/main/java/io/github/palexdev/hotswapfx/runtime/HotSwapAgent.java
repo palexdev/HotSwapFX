@@ -20,6 +20,8 @@ package io.github.palexdev.hotswapfx.runtime;
 
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Method;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -30,7 +32,10 @@ import io.github.palexdev.hotswapfx.core.ServiceHook;
 import io.github.palexdev.hotswapfx.core.ServiceHook.HookType;
 import io.github.palexdev.hotswapfx.core.annotations.HotSwappable;
 import io.github.palexdev.hotswapfx.orchestration.HotSwapServer;
+import io.github.palexdev.hotswapfx.orchestration.message.ProcessPendingReloads;
 import io.github.palexdev.hotswapfx.orchestration.message.ReloadRequest;
+import io.github.palexdev.hotswapfx.orchestration.message.ReloadRequest.Changes;
+import io.github.palexdev.hotswapfx.orchestration.message.ToggleAutoReload;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
@@ -64,13 +69,21 @@ public class HotSwapAgent {
 
     private final Map<String, String> args;
     private final Instrumentation inst;
+
     protected HotSwapServer server;
+    private boolean autoReload = true;
+    private boolean processPending = false;
+    private int port = -1;
+
+    private final Changes pendingChanges = new Changes();
 
     public HotSwapAgent(String args, Instrumentation inst) {
         this.args = parseArgs(args);
         this.inst = inst;
-        if (!useLegacyWatchService())
-            this.server = new HotSwapServer(port());
+
+        server = new HotSwapServer(port());
+        server.registerHook(ProcessPendingReloads.class, this::processPending);
+        server.registerHook(ToggleAutoReload.class, this::toggleAutoReload);
     }
 
     public void install() {
@@ -89,12 +102,46 @@ public class HotSwapAgent {
             LegacyWatchService.instance().start();
         } else {
             server.registerHook(ReloadRequest.class, this::handleReload);
-            server.startAsync();
         }
 
+        if (useDevTools()) {
+            try {
+                Class<?> klass = Class.forName("io.github.palexdev.hotswapfx.devtools.DevTools");
+                Method main = klass.getDeclaredMethod("main", String[].class);
+                main.setAccessible(true);
+                String[] args = new String[]{"--port=" + port(), "--autoclose"};
+                main.invoke(null, (Object) args);
+            } catch (ReflectiveOperationException ex) {
+                Logger.error(ex, "Failed to start devtools");
+            }
+        }
+
+        server.startAsync();
+    }
+
+    protected void processPending(ProcessPendingReloads request) {
+        try {
+            processPending = true;
+            if (!pendingChanges.isEmpty()) {
+                handleReload(new ReloadRequest(pendingChanges));
+                pendingChanges.clear();
+            } else {
+                Logger.info("No pending changes, skipping manual reload...");
+            }
+        } finally {
+            processPending = false;
+        }
     }
 
     protected void handleReload(ReloadRequest request) {
+        if (request.changes() == null || request.changes().isEmpty()) return;
+        if (!autoReload && !processPending) {
+            Logger.info("Auto reload is disabled, storing changes as pending...");
+            request.changes().forEach((k, v) ->
+                pendingChanges.merge(k, v, (_, c2) -> c2));
+            return;
+        }
+
         // Notify early hooks
         request.changes().keySet().forEach(this::notifyEarlyHooks);
 
@@ -140,16 +187,40 @@ public class HotSwapAgent {
         reloaded.forEach(HotSwapService.instance()::swapNodes);
     }
 
+    protected void toggleAutoReload(ToggleAutoReload request) {
+        autoReload = request.state();
+        Logger.info("Auto reload: {}", autoReload ? "Enabled" : "Disabled");
+    }
+
     @SuppressWarnings("unchecked")
     private void notifyEarlyHooks(Path path) {
         ofNullable(HotSwapService.instance().hooks().get(HookType.ON_FILE))
             .ifPresent(hooks -> hooks.forEach(h -> ((ServiceHook<Path>) h).onEvent(path)));
     }
 
-    private int port() {
-        return ofNullable(args.get("port"))
-            .map(Integer::valueOf)
-            .orElseThrow(() -> new RuntimeException("Port not specified"));
+    public int port() {
+        if (port < 0) {
+            port = ofNullable(args.get("port"))
+                .map(Integer::valueOf)
+                .orElseGet(this::getAvailablePort);
+        }
+        return port;
+    }
+
+    public boolean useDevTools() {
+        return ofNullable(args.get("useDevTools"))
+            .map(Boolean::valueOf)
+            .orElse(false);
+    }
+
+    // when not using the Gradle plugin, the agent _may_ not receive the port argument, in that case get one so that
+    // there can be communication with the DevTools
+    private int getAvailablePort() {
+        try (ServerSocket server = new ServerSocket(0)) {
+            return server.getLocalPort();
+        } catch (Exception ex) {
+            return 8765;
+        }
     }
 
     private boolean useLegacyWatchService() {
@@ -159,6 +230,7 @@ public class HotSwapAgent {
     }
 
     private Map<String, String> parseArgs(String allArgs) {
+        if (allArgs == null || allArgs.isBlank()) return Collections.emptyMap();
         Map<String, String> argsMap = new HashMap<>();
         String[] args = allArgs.split(",");
         for (String arg : args) {

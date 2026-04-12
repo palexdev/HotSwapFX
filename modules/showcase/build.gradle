@@ -1,7 +1,7 @@
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version "$jfxPlugin"
-    id 'io.github.palexdev.hotswapfx-plugin' version '25+'
+    id 'io.github.palexdev.hotswapfx-plugin' version 'latest.release'
 }
 
 repositories {
@@ -10,9 +10,12 @@ repositories {
 
 dependencies {
     implementation(project(':core'))
-    implementation "io.github.palexdev:hotswapfx-runtime:25+"
-    implementation "io.github.palexdev:mfxcomponents:25+"
-    implementation "io.github.palexdev:imcache:21+"
+    implementation(project(':devtools'))
+    implementation "io.github.palexdev:hotswapfx-runtime:latest.release"
+    implementation "io.github.palexdev:mfxcore:latest.release"
+    implementation 'io.github.palexdev:mfxcomponents:latest.release'
+    implementation "io.github.palexdev:imcache:latest.release"
+    implementation "one.jpro.platform.jpms:cssfx:latest.release"
     implementation "org.tinylog:tinylog-api:$tinylog"
     implementation "org.tinylog:tinylog-impl:$tinylog"
 }
@@ -28,6 +31,8 @@ javafx {
     configurations = ['implementation']
 }
 
-//hotSwapFx {
-//    legacyWatchService = true
-//}
+hotSwapFx {
+    useDevTools = true
+    legacyWatchService = false
+    verbose = true
+}
