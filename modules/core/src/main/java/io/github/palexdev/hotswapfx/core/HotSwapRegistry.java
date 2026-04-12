@@ -128,6 +128,11 @@ class HotSwapRegistry {
         }
     }
 
+    /// @return the currently tracked classes which may be reloaded at some point
+    public Set<Class<?>> trackedClasses() {
+        return Collections.unmodifiableSet(registry.keySet());
+    }
+
     //================================================================================
     // Inner Classes
     //================================================================================

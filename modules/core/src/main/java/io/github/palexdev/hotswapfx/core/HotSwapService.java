@@ -124,6 +124,11 @@ public class HotSwapService {
         return registry.dependsOn(klass);
     }
 
+    /// Delegate of [HotSwapRegistry#trackedClasses()]
+    public Set<Class<?>> registeredClasses() {
+        return registry.trackedClasses();
+    }
+
     @SuppressWarnings("unchecked")
     private void notifyLateHooks(Class<?> klass) {
         ofNullable(hooksMap.get(HookType.ON_CLASS))
