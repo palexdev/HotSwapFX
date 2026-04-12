@@ -23,4 +23,4 @@ jobs:
         run: curl -Ls https://sh.jbang.dev | bash -s - app setup
 
       - name: Run script
-        run: jbang run ./scripts/binaries/UpdateChangelogs.jar --commit
+        run: java -jar ./scripts/binaries/UpdateChangelogs.jar --commit
