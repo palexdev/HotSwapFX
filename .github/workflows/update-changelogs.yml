@@ -19,8 +19,5 @@ jobs:
           distribution: jetbrains
           java-version: 25
 
-      - name: Install JBang
-        run: curl -Ls https://sh.jbang.dev | bash -s - app setup
-
       - name: Run script
         run: java -jar ./scripts/binaries/UpdateChangelogs.jar --commit
