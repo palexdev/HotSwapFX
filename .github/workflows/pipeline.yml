@@ -12,8 +12,7 @@ jobs:
     if: ${{ contains(github.event.head_commit.message, ':bookmark:') }}
     uses: ./.github/workflows/update-changelogs.yml
 
-# TODO
-#  maven-release:
-#    needs: [ build, update-changelogs ]
-#    uses: ./.github/workflows/maven-release.yml
-#    secrets: inherit
+  maven-release:
+    needs: [ build, update-changelogs ]
+    uses: ./.github/workflows/maven-release.yml
+    secrets: inherit
