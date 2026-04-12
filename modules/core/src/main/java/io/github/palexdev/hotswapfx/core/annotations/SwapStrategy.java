@@ -24,6 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import io.github.palexdev.hotswapfx.core.Utils;
+import io.github.palexdev.hotswapfx.core.Utils.ThrowingRunnable;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -51,7 +52,7 @@ public @interface SwapStrategy {
     /// The two attempts are combined into one by [#swapInScenegraph(Node, Node)]
     ///
     /// _Note: swapping must be done on the FX thread and ideally the calling thread should wait for the swap to happen!
-    /// Default implementations already do this with [Utils#waitForFX(Runnable)]_
+    /// Default implementations already do this with [Utils#waitForFX(ThrowingRunnable)]_
     interface Default {
         static boolean swapInScenegraph(Node oldNode, Node newNode) {
             return swapInParent(oldNode, newNode, oldNode.getParent()) || swapInScene(oldNode, newNode, oldNode.getScene());
@@ -60,13 +61,11 @@ public @interface SwapStrategy {
         static boolean swapInParent(Node oldNode, Node newNode, Node parent) {
             if (oldNode != null && parent instanceof Pane pane) {
                 ObservableList<Node> children = pane.getChildren();
-                return Utils.waitForFx(() -> {
-                    int idx = children.indexOf(oldNode);
-                    if (idx < 0) return false;
-                    children.set(idx, newNode);
-                    Logger.debug("Node {} replaced in parent container", oldNode);
-                    return true;
-                });
+                int idx = children.indexOf(oldNode);
+                if (idx < 0) return false;
+                children.set(idx, newNode);
+                Logger.debug("Node {} replaced in parent container", oldNode);
+                return true;
             }
             return false;
         }
@@ -76,10 +75,8 @@ public @interface SwapStrategy {
                 scene != null &&
                 scene.getRoot() == oldNode
             ) {
-                Utils.waitForFX(() -> {
-                    scene.setRoot(((Parent) newNode));
-                    Logger.debug("Node {} replaced in Scene", oldNode);
-                });
+                scene.setRoot(((Parent) newNode));
+                Logger.debug("Node {} replaced in Scene", oldNode);
                 return true;
             }
             return false;

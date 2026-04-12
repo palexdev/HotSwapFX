@@ -25,11 +25,11 @@ import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 import io.github.palexdev.hotswapfx.core.annotations.Factory;
 import javafx.application.Platform;
 import javafx.scene.Node;
+import org.tinylog.Logger;
 
 public class Utils {
 
@@ -62,17 +62,26 @@ public class Utils {
     }
 
     /// Runs the given runnable on the FX thread and blocks the calling thread until it finishes.
-    public static void waitForFX(Runnable runnable) {
-        waitForFx((Supplier<Void>) () -> {
-            runnable.run();
-            return null;
-        });
+    public static void waitForFX(ThrowingRunnable runnable) {
+        waitForFxAndGet((ThrowingSupplier<Void>) () -> {
+            try {
+                runnable.run();
+                return null;
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }, null);
     }
 
     /// Runs the given supplier on the FX thread and blocks the calling thread until it finishes.
-    public static <T> T waitForFx(Supplier<T> supplier) {
+    public static <T> T waitForFxAndGet(ThrowingSupplier<T> supplier, T defaultValue) {
         if (Platform.isFxApplicationThread()) {
-            supplier.get();
+            try {
+                return supplier.get();
+            } catch (Exception ex) {
+                Logger.error(ex);
+                return defaultValue;
+            }
         }
 
         CompletableFuture<T> future = new CompletableFuture<>();
@@ -95,5 +104,19 @@ public class Utils {
             expr = "glob:" + expr;
         }
         return FileSystems.getDefault().getPathMatcher(expr);
+    }
+
+    //================================================================================
+    // Inner Classes
+    //================================================================================
+
+    @FunctionalInterface
+    public interface ThrowingRunnable {
+        void run() throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface ThrowingSupplier<T> {
+        T get() throws Exception;
     }
 }

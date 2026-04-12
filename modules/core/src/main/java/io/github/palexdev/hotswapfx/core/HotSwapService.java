@@ -78,7 +78,8 @@ public class HotSwapService {
         Logger.trace("Found {} instances", instances.size());
         for (Node node : instances) {
             try {
-                Node newNode = Utils.newInstanceOf(node);
+                Node newNode = Utils.waitForFxAndGet(() -> Utils.newInstanceOf(node), null);
+                if (newNode == null) throw new HotSwapException("New node is null, aborting replace...");
                 Logger.debug("Instantiated new node: {}, replacing...", newNode);
 
                 // Try 1: use strategy if available
@@ -87,19 +88,21 @@ public class HotSwapService {
                     .findFirst()
                     .orElse(null);
                 if (strategy != null) {
-                    strategy.setAccessible(true);
-                    strategy.invoke(node, newNode);
-                    registry.unregister(node);
+                    Utils.waitForFX(() -> {
+                        strategy.setAccessible(true);
+                        strategy.invoke(node, newNode);
+                        registry.unregister(node);
+                    });
                     continue;
                 }
 
                 // Try 2: try default strategy
-                if (SwapStrategy.Default.swapInScenegraph(node, newNode)) {
+                boolean swapped = Utils.waitForFxAndGet(() -> SwapStrategy.Default.swapInScenegraph(node, newNode), false);
+                if (swapped) {
                     registry.unregister(node);
-                    continue;
+                } else {
+                    throw new HotSwapException("Node is either detached from JavaFX Scenegraph or new one could not be attached");
                 }
-
-                throw new HotSwapException("Node is either detached from JavaFX Scenegraph or new one could not be attached");
             } catch (Exception ex) {
                 Logger.error(ex, "Could not replace node: {}", node);
             }
