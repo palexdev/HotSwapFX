@@ -158,7 +158,7 @@ public class LegacyWatchService {
                 }
             }
             classpath = tmp;
-            Logger.debug("Collected classpath: \n{}", Arrays.toString(classpath.toArray()));
+            Logger.info("Collected classpath: \n{}", String.join("\n", classpath.stream().map(Path::toString).toArray(String[]::new)));
         }
         return Collections.unmodifiableSet(classpath);
     }

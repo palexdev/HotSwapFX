@@ -76,12 +76,12 @@ public class HotSwapServer implements AutoCloseable {
         server.addListener(new Listener() {
             @Override
             public void connected(Connection connection) {
-                Logger.info("Client connected ID:{}|IP:{}", connection.getID(), connection.getRemoteAddressTCP());
+                Logger.debug("Client connected ID:{}|IP:{}", connection.getID(), connection.getRemoteAddressTCP());
             }
 
             @Override
             public void disconnected(Connection connection) {
-                Logger.info("Client disconnected ID:{}", connection.getID());
+                Logger.debug("Client disconnected ID:{}", connection.getID());
             }
 
             @Override
@@ -113,7 +113,7 @@ public class HotSwapServer implements AutoCloseable {
 
     @Override
     public void close() {
-        Logger.debug("Closing server...");
+        Logger.info("Closing server...");
         server.close();
     }
 
