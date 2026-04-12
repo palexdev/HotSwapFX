@@ -97,7 +97,6 @@ public class Utils {
 
     /// @return a new [PathMatcher] object that matches against the given expression.
     /// If the expression is not prefixed by either `glob:` or `regex:`, the expression is considered to be a glob pattern.
-    ///
     /// @see FileSystem#getPathMatcher(String)
     public static PathMatcher toPathMatcher(String expr) {
         if (!expr.startsWith("glob:") && !expr.startsWith("regex:")) {
