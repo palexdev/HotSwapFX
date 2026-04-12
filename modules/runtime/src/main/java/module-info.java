@@ -1,7 +1,7 @@
 module HotSwapFX.Runtime {
-    requires HotSwapFX.Core;
-    requires HotSwapFX.Orchestration;
-    requires javafx.graphics;
+    requires transitive HotSwapFX.Core;
+    requires transitive HotSwapFX.Orchestration;
+    requires transitive javafx.graphics;
     requires java.instrument;
     requires net.bytebuddy;
     requires org.tinylog.api;

@@ -18,5 +18,5 @@ java {
 javafx {
     version = "$jfx"
     modules = ['javafx.controls']
-    configurations = ['api']
+    configurations = ['compileOnly']
 }
