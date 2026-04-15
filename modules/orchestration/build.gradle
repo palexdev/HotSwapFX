@@ -1,5 +1,3 @@
-version = "$orchestration"
-
 dependencies {
     implementation "com.esotericsoftware:kryo:$kryo"
     implementation "io.github.palexdev:kryonet:$kryonet"

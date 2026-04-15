@@ -3,8 +3,6 @@ plugins {
     id 'org.openjfx.javafxplugin' version "$jfxPlugin"
 }
 
-version = "$devtools"
-
 dependencies {
     api(project(":orchestration"))
     implementation "io.github.palexdev:mfxcore:$mfxcore"

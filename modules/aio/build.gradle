@@ -2,8 +2,6 @@ plugins {
     id 'org.openjfx.javafxplugin' version "$jfxPlugin"
 }
 
-version = "$aio"
-
 dependencies {
     api project(':core')
     api project(':orchestration')

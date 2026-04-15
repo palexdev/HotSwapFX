@@ -2,8 +2,6 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-version = "$plugin"
-
 dependencies {
     implementation(project(":orchestration"))
 }

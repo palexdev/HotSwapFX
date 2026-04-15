@@ -2,8 +2,6 @@ plugins {
     id 'org.openjfx.javafxplugin' version "$jfxPlugin"
 }
 
-version = "$core"
-
 dependencies {
     implementation "org.tinylog:tinylog-api:$tinylog"
     implementation "org.tinylog:tinylog-impl:$tinylog"

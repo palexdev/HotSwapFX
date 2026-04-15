@@ -7,6 +7,8 @@ subprojects {
     apply plugin: 'java-library'
     apply plugin: "com.vanniktech.maven.publish"
 
+    version = "$libVer"
+
     // Remove vanniktech nonsense
     gradle.taskGraph.whenReady { graph ->
         if (graph.hasTask(plainJavadocJar)) {
