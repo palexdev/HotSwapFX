@@ -5,6 +5,7 @@ pluginManagement {
     }
 }
 
+include 'aio'
 include 'core'
 include 'devtools'
 include 'gradle-plugin'

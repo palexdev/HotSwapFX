@@ -1,0 +1,23 @@
+plugins {
+    id 'org.openjfx.javafxplugin' version "$jfxPlugin"
+}
+
+version = "$aio"
+
+dependencies {
+    api project(':core')
+    api project(':orchestration')
+    api project(':runtime')
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-all") }
+}
+
+javafx {
+    version = "$jfx"
+    modules = ['javafx.graphics']
+    configurations = ['compileOnly']
+}
