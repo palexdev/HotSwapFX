@@ -9,7 +9,7 @@ dependencies {
 java {
     withSourcesJar()
     withJavadocJar()
-    tasks.withType(Jar).each { it.archiveBaseName.set("mfxcore") }
+    tasks.withType(Jar).each { it.archiveBaseName.set("hotswapfx-plugin") }
 }
 
 gradlePlugin {
@@ -19,4 +19,9 @@ gradlePlugin {
             implementationClass = 'io.github.palexdev.hotswapfx.gradle.HotSwapPlugin'
         }
     }
+}
+
+tasks.register('publishMavenPublicationToMavenLocal').configure {
+    group = 'publishing'
+    finalizedBy publishPluginMavenPublicationToMavenLocal, publishHotswapfxPluginMarkerMavenPublicationToMavenLocal
 }

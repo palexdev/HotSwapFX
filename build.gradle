@@ -56,7 +56,6 @@ tasks.register("publishAllToLocal").configure {
             "core:publishMavenPublicationToMavenLocal",
             "runtime:publishMavenPublicationToMavenLocal",
             "orchestration:publishMavenPublicationToMavenLocal",
-            "gradle-plugin:publishPluginMavenPublicationToMavenLocal",
-            "gradle-plugin:publishHotswapfxPluginMarkerMavenPublicationToMavenLocal"
+            "gradle-plugin:publishMavenPublicationToMavenLocal",
     )
 }
