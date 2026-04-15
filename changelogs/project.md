@@ -1,3 +1,11 @@
+## Project - ca1ba8c
+
+- 15/04/2026 <4efd65d> Update Maven publish plugin
+- 12/04/2026 <67aec36> Remove JBang step from update changelogs workflow
+- 12/04/2026 <709e6b2> Convert 'skip showcase' Gradle property to env property
+
+
+
 ## Project - c2d1f51
 
 - 12/04/2026 <887949b> Add Maven release step
@@ -15,4 +23,3 @@
 - 21/03/2026 <7223f6f> Update dev scripts
 - 21/03/2026 <d3b138e> Update dev scripts
 - 20/03/2026 <93f2476> Add CI/CD pipeline
-
