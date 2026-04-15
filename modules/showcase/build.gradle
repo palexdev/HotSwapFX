@@ -33,6 +33,6 @@ javafx {
 
 hotSwapFx {
     useDevTools = true
-    legacyWatchService = false
+    useLegacyWatchService = false
     verbose = true
 }

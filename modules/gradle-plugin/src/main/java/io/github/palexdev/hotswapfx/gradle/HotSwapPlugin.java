@@ -146,7 +146,7 @@ public class HotSwapPlugin implements Plugin<Project> {
             t.getTimestampFile().set(
                 project.getLayout().getProjectDirectory().file(".hotswapfx")
             );
-            t.dependsOn("compileJava", "processResources");
+            t.dependsOn("build");
         });
 
         // Hot run task
@@ -161,7 +161,7 @@ public class HotSwapPlugin implements Plugin<Project> {
                     rt.jvmArgs("-javaagent:%s=port=%d,legacyWatchService=%s,useDevTools=%b".formatted(
                         settings().agentPath(),
                         settings().agentPort(),
-                        settings().legacyWatchService,
+                        settings().useLegacyWatchService,
                         settings().useDevTools
                     ), "-XX:+AllowEnhancedClassRedefinition");
                     rt.doLast(_ -> context.dispose());
@@ -188,7 +188,7 @@ public class HotSwapPlugin implements Plugin<Project> {
         String agentPath = null;
         int agentPort = -1;
         boolean useDevTools = false;
-        boolean legacyWatchService = false;
+        boolean useLegacyWatchService = false;
         boolean verbose = false;
 
         public Settings(Project project) {
