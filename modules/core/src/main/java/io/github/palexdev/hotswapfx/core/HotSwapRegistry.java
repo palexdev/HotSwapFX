@@ -25,6 +25,7 @@ import java.util.*;
 
 import io.github.palexdev.hotswapfx.core.annotations.HotSwappable;
 import javafx.scene.Node;
+import org.tinylog.Logger;
 
 import static java.util.Optional.ofNullable;
 
@@ -72,8 +73,10 @@ class HotSwapRegistry {
             .filter(res -> !res.isBlank())
             .map(Utils::toPathMatcher)
             .map(matcher -> (ServiceHook<Path>) p -> {
-                if (matcher.matches(p.getFileName()))
+                if (matcher.matches(p.getFileName())) {
+                    Logger.info("Reloading class {} on matched pattern: {}", klass, annotation.resources());
                     HotSwapService.instance().swapNodes(klass);
+                }
             })
             .orElse(null);
         if (resHooks.containsKey(klass)) { // unregister previous hook
