@@ -25,3 +25,20 @@ tasks.register('publishMavenPublicationToMavenLocal').configure {
     group = 'publishing'
     finalizedBy publishPluginMavenPublicationToMavenLocal, publishHotswapfxPluginMarkerMavenPublicationToMavenLocal
 }
+
+tasks.register('fatJar', Jar.class) {
+    group = 'build'
+    archiveBaseName = 'hotswapfx-plugin-all'
+    archiveVersion = 'local'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } } with jar
+    copy {
+        from fatJar
+        into "$project.rootDir/libs"
+    }
+    dependsOn(':orchestration:jar')
+}
+
+tasks.named('build').configure {
+    finalizedBy 'fatJar'
+}

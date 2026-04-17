@@ -12,7 +12,11 @@ include 'gradle-plugin'
 include 'orchestration'
 include 'runtime'
 
-if (!Boolean.parseBoolean(System.getenv('SKIP_SHOWCASE'))) {
+// Fucking Gradle
+if (!file('libs/hotswapfx-plugin-all-local.jar').exists()) {
+    logger.error("Skipping 'showcase' module configuration because Gradle plugin is not published in 'libs' " +
+                "(run ':gradle-plugin:fatJar' and then reload Gradle)")
+} else {
     include 'showcase'
 }
 

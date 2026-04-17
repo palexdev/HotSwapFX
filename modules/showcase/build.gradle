@@ -1,8 +1,20 @@
+buildscript {
+    repositories {
+        flatDir {
+            dirs("$project.rootDir/libs")
+        }
+    }
+    dependencies {
+        classpath("io.github.palexdev:hotswapfx-plugin-all:local")
+    }
+}
+
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version "$jfxPlugin"
-    id 'io.github.palexdev.hotswapfx-plugin' version 'latest.release'
 }
+
+apply plugin: 'io.github.palexdev.hotswapfx-plugin'
 
 repositories {
     mavenLocal()
