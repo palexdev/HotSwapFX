@@ -1,3 +1,11 @@
+## Project - 67e0876
+
+- 17/04/2026 <f0a1e2f> Use a different strategy to include/exclude the showcase module
+- 15/04/2026 <3d89bcb> Define local publish task for gradle plugin (for convenience)
+- 15/04/2026 <08c3fd8> Use same version for all modules
+
+
+
 ## Project - ca1ba8c
 
 - 15/04/2026 <4efd65d> Update Maven publish plugin

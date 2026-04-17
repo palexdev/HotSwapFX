@@ -1,3 +1,11 @@
+## 25.2.1 - 17/04/2026 - 67e0876
+
+### Misc
+
+- <d1a11dc> Add logging for classes reloaded on matched resources patterns
+
+
+
 ## 25.2.0 - 12/04/2026 - c2d1f51
 
 ### Features
@@ -31,4 +39,3 @@
 
 - <e714679> HotSwappable: make dependencies optional
 - <77f7be0> HotSwapRegistry: use Class<?> instead of plain Strings
-
